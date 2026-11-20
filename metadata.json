@@ -1,0 +1,8 @@
+{
+  "name": "Shazam Personalised Clone ",
+  "description": "Adding ux patterns and fows according to my tates and requirements ",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
