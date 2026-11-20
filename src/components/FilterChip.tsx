@@ -38,10 +38,10 @@ export const FilterChip: React.FC<FilterChipProps> = ({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        'pressable inline-flex items-center rounded-full border text-[13.5px] font-medium tracking-[-0.005em] whitespace-nowrap shrink-0 cursor-pointer select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]',
+        'pressable inline-flex items-center rounded-full border text-[14.5px] md:text-[13.5px] font-medium tracking-[-0.005em] whitespace-nowrap shrink-0 cursor-pointer select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]',
         isActiveResult
-          ? 'h-[36px] gap-[7px] pl-[5px] pr-[11px] bg-[#132238] border-[var(--accent-blue-border)] text-white hover:bg-[#192D4A]'
-          : 'h-[38px] gap-[8px] pl-[5px] pr-[13px]',
+          ? 'h-[40px] md:h-[36px] gap-[7px] pl-[5px] pr-[11px] bg-[#132238] border-[var(--accent-blue-border)] text-white hover:bg-[#192D4A]'
+          : 'h-[42px] md:h-[38px] gap-[8px] pl-[5px] pr-[13px]',
         !selected &&
           !isActiveResult &&
           'bg-[var(--surface-elevated)] border-[var(--border-hairline)] text-white hover:bg-[var(--surface-elevated-hover)]',
@@ -74,7 +74,9 @@ export const FilterChip: React.FC<FilterChipProps> = ({
         )}
       </span>
 
-      <span className="truncate max-w-[132px]">{label}</span>
+      <span className={cn('truncate', isExplore ? 'max-w-[148px]' : 'max-w-[152px]')}>
+        {label}
+      </span>
     </button>
   );
 };

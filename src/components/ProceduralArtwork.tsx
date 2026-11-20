@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArtworkSpec, FilterCategoryKey } from '../types/music';
 import {
   renderCategoryAvatarDataUrl,
@@ -25,7 +25,38 @@ export const AlbumCover: React.FC<AlbumCoverProps> = ({
   showPlayOverlay = false,
   rounded = 'md',
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [imgFailed, setImgFailed] = useState(false);
+
+  // Hero covers (> 96px, e.g., Music Player & Home carousel) render immediately; list thumbnails gate behind IntersectionObserver
+  const shouldDeferProcedural = size <= 96 && !artwork.imageUrl;
+  const [isNearViewport, setIsNearViewport] = useState(() => !shouldDeferProcedural);
+
+  // Reset image error flag whenever the cover imageUrl changes (e.g., Wrong Song correction or card reuse)
+  useEffect(() => {
+    setImgFailed(false);
+  }, [artwork.imageUrl]);
+
+  useEffect(() => {
+    if (isNearViewport) return;
+    if (typeof IntersectionObserver === 'undefined' || !containerRef.current) {
+      setIsNearViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '240px' }
+    );
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [isNearViewport]);
 
   const radiusClass =
     rounded === 'full'
@@ -43,14 +74,16 @@ export const AlbumCover: React.FC<AlbumCoverProps> = ({
 
   const proceduralSrc = useMemo(() => {
     if (artwork.imageUrl && !imgFailed) return null;
+    if (!isNearViewport) return null;
     return renderEditorialCoverDataUrl(effectiveSeed, artwork, size, titleHint);
-  }, [artwork, effectiveSeed, size, titleHint, imgFailed]);
+  }, [artwork, effectiveSeed, size, titleHint, imgFailed, isNearViewport]);
 
   const activeSrc = !imgFailed && artwork.imageUrl ? artwork.imageUrl : proceduralSrc;
   const imageScale = !imgFailed && artwork.imageUrl ? artwork.imageScale ?? 1.02 : 1;
 
   return (
     <div
+      ref={containerRef}
       style={{
         width: size,
         height: size,
@@ -67,10 +100,14 @@ export const AlbumCover: React.FC<AlbumCoverProps> = ({
           src={activeSrc}
           alt=""
           aria-hidden="true"
+          loading={size <= 96 ? 'lazy' : 'eager'}
           decoding="async"
           referrerPolicy="no-referrer"
           onError={() => {
-            if (!imgFailed && artwork.imageUrl) setImgFailed(true);
+            if (!imgFailed && artwork.imageUrl) {
+              setImgFailed(true);
+              setIsNearViewport(true);
+            }
           }}
           style={
             imageScale !== 1
@@ -145,6 +182,7 @@ export const CircularChipAvatar: React.FC<CircularChipAvatarProps> = ({
           src={avatarSrc}
           alt=""
           aria-hidden="true"
+          loading="lazy"
           decoding="async"
           className="block h-full w-full object-cover"
         />

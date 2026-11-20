@@ -20,6 +20,9 @@ interface GlobalSearchOverlayProps {
   onOpenChange: (open: boolean) => void;
   songs: Song[];
   favoriteIds: Set<string>;
+  currentSongId?: string | null;
+  isPlaying?: boolean;
+  onToggleFavorite: (songId: string) => void;
   onSelectSong: (song: Song) => void;
   onOpenSongActionMenu: (song: Song, rect: DOMRect) => void;
   portalContainer: HTMLElement | null;
@@ -31,6 +34,9 @@ export const GlobalSearchOverlay: React.FC<GlobalSearchOverlayProps> = ({
   onOpenChange,
   songs,
   favoriteIds,
+  currentSongId = null,
+  isPlaying = false,
+  onToggleFavorite,
   onSelectSong,
   onOpenSongActionMenu,
   portalContainer,
@@ -94,7 +100,7 @@ export const GlobalSearchOverlay: React.FC<GlobalSearchOverlayProps> = ({
                     : { type: 'spring', bounce: 0, duration: 0.28 }
                 }
                 {...sheetMotionDragProps}
-                className="absolute inset-x-0 bottom-0 top-[52px] z-50 flex flex-col rounded-t-[32px] bg-[var(--surface-sheet)]/96 border-t border-[var(--border-glass)] overflow-hidden"
+                className="absolute inset-x-0 bottom-0 top-[calc(var(--safe-top)+10px)] md:top-[52px] z-50 flex flex-col rounded-t-[32px] bg-[var(--surface-sheet)]/96 border-t border-[var(--border-glass)] overflow-hidden"
               >
                 <DialogTitle className="sr-only">Search Library Overlay</DialogTitle>
                 <DialogDescription className="sr-only">
@@ -126,14 +132,14 @@ export const GlobalSearchOverlay: React.FC<GlobalSearchOverlayProps> = ({
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder={`Search ${songs.length} songs, artists, genres, cities`}
-                      className="h-[40px] w-full rounded-full bg-[var(--surface-elevated)] pl-9 pr-10 text-[14.5px] text-white placeholder:text-[var(--text-tertiary)] border border-[var(--border-hairline)] focus:border-[var(--accent-blue)]/65 focus:outline-none"
+                      className="h-[44px] md:h-[40px] w-full rounded-full bg-[var(--surface-elevated)] pl-9 pr-10 text-[16px] md:text-[14.5px] text-white placeholder:text-[var(--text-tertiary)] border border-[var(--border-hairline)] focus:border-[var(--accent-blue)]/65 focus:outline-none"
                     />
                     {query && (
                       <button
                         type="button"
                         onClick={() => setQuery('')}
                         aria-label="Clear search"
-                        className="absolute right-0 flex h-[40px] w-[44px] items-center justify-center text-white/80 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] rounded-full"
+                        className="absolute right-0 flex h-[44px] md:h-[40px] w-[44px] items-center justify-center text-white/80 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] rounded-full"
                       >
                         <span className="flex h-[20px] w-[20px] items-center justify-center rounded-full bg-white/16">
                           <X size={12} {...UI_ICON_PROPS} />
@@ -164,7 +170,7 @@ export const GlobalSearchOverlay: React.FC<GlobalSearchOverlayProps> = ({
                 {/* Scrollable matches */}
                 <div
                   data-no-sheet-drag="true"
-                  className="flex-1 overflow-y-auto no-scrollbar px-4 pb-8"
+                  className="flex-1 overflow-y-auto no-scrollbar px-4 pb-[calc(var(--safe-bottom)+28px)] md:pb-8"
                 >
                   {results.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -184,11 +190,14 @@ export const GlobalSearchOverlay: React.FC<GlobalSearchOverlayProps> = ({
                           isMultiSelectMode={false}
                           isSelected={false}
                           isFavorite={favoriteIds.has(song.id)}
+                          isActiveTrack={currentSongId === song.id}
+                          isPlaying={isPlaying && currentSongId === song.id}
                           onSelectSong={(s) => {
                             onOpenChange(false);
                             onSelectSong(s);
                           }}
                           onToggleSelect={() => {}}
+                          onToggleFavorite={onToggleFavorite}
                           onOpenActionMenu={(s, rect) => {
                             onOpenChange(false);
                             onOpenSongActionMenu(s, rect);

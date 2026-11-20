@@ -69,7 +69,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     : { type: 'spring', bounce: 0, duration: 0.34 }
                 }
                 {...sheetMotionDragProps}
-                className="absolute inset-x-0 bottom-0 top-[54px] z-50 flex flex-col rounded-t-[32px] bg-[var(--surface-sheet)] border-t border-[var(--border-glass)] shadow-[0_-16px_48px_rgba(0,0,0,0.75)] overflow-hidden"
+                className="absolute inset-x-0 bottom-0 top-[calc(var(--safe-top)+12px)] md:top-[54px] z-50 flex flex-col rounded-t-[32px] bg-[var(--surface-sheet)] border-t border-[var(--border-glass)] shadow-[0_-16px_48px_rgba(0,0,0,0.75)] overflow-hidden"
               >
                 {/* Dedicated Grabber + Header Drag Region */}
                 <div
@@ -103,7 +103,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 </div>
 
                 {/* Content: strictly Preferences -> Location & Haptic Feedback (drag-free) */}
-                <div className="flex-1 px-4 pt-2">
+                <div className="flex-1 px-4 pt-2 pb-[calc(var(--safe-bottom)+24px)] md:pb-8">
                   <h2 className="mb-2.5 px-1 text-[13px] font-medium text-[var(--text-secondary)]">
                     Preferences
                   </h2>

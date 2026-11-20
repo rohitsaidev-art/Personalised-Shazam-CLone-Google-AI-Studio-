@@ -14,7 +14,7 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({
       {/* Centered mobile-proportioned iPhone frame on desktop; edge-to-edge full screen on mobile */}
       <div
         ref={portalContainerRef}
-        className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-black md:h-[852px] md:max-h-[calc(100dvh-48px)] md:w-[393px] md:rounded-[52px] md:border md:border-white/[0.14] md:shadow-[0_32px_90px_rgba(0,0,0,0.85),0_0_0_6px_#141519]"
+        className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-black md:[--safe-top:0px] md:[--safe-bottom:0px] md:[--safe-left:0px] md:[--safe-right:0px] md:h-[852px] md:max-h-[calc(100dvh-48px)] md:w-[393px] md:rounded-[52px] md:border md:border-white/[0.14] md:shadow-[0_32px_90px_rgba(0,0,0,0.85),0_0_0_6px_#141519]"
       >
         {/* iOS Status Bar with Dynamic Island (visible inside the desktop mobile frame) */}
         <div
@@ -48,10 +48,10 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({
           {children}
         </main>
 
-        {/* Home Indicator bar */}
+        {/* Home Indicator bar (desktop mock frame only — real iPhones render their own system indicator) */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-[6px] z-[90] flex justify-center"
+          className="pointer-events-none absolute inset-x-0 bottom-[6px] z-[90] hidden justify-center md:flex"
         >
           <div className="h-[4px] w-[134px] rounded-full bg-white/35" />
         </div>

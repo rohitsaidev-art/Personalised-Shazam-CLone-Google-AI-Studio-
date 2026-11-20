@@ -87,7 +87,7 @@ export const QuickFilterRow: React.FC<QuickFilterRowProps> = ({
             onReturnToExploreFromResults();
           }}
           aria-label="Back to Explore filters"
-          className="glass-circle hit-target-44 pressable-strong flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-full text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
+          className="glass-circle hit-target-44 pressable-strong flex h-[40px] w-[40px] md:h-[36px] md:w-[36px] shrink-0 items-center justify-center rounded-full text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
         >
           <X size={17} {...UI_ICON_PROPS} />
         </button>
@@ -127,7 +127,7 @@ export const QuickFilterRow: React.FC<QuickFilterRowProps> = ({
             onCloseQuickFilter();
           }}
           aria-label="Clear quick filter"
-          className="glass-circle hit-target-44 pressable-strong flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
+          className="glass-circle hit-target-44 pressable-strong flex h-[42px] w-[42px] md:h-[38px] md:w-[38px] shrink-0 items-center justify-center rounded-full text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
         >
           <X size={17} {...UI_ICON_PROPS} />
         </button>
@@ -168,7 +168,7 @@ export const QuickFilterRow: React.FC<QuickFilterRowProps> = ({
           onOpenExplore();
         }}
         aria-label="Open advanced Explore filters"
-        className="glass-circle hit-target-44 pressable-strong flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
+        className="glass-circle hit-target-44 pressable-strong flex h-[42px] w-[42px] md:h-[38px] md:w-[38px] shrink-0 items-center justify-center rounded-full text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
       >
         <FilterLinesIcon className="h-[18px] w-[18px]" />
       </button>

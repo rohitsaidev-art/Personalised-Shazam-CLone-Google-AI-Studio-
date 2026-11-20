@@ -6,6 +6,7 @@ import {
   ExploreFilters,
   FilterCategoryKey,
   QuickFilterState,
+  RepeatMode,
   Song,
   SortConfig,
 } from './types/music';
@@ -29,6 +30,23 @@ import { MultiSelectActionControls } from './components/MultiSelectActionControl
 import { GlobalSearchOverlay } from './components/GlobalSearchOverlay';
 import { MusicPlayerSheet } from './components/MusicPlayerSheet';
 import { PlaylistPickerSheet } from './components/PlaylistPickerSheet';
+import { ConfirmDialog } from './components/ConfirmDialog';
+import {
+  addIdsToSet,
+  removeIdsFromSet,
+  removeSongsWithSnapshot,
+  resolveMultiSelectCategoryNav,
+  restoreSongsFromSnapshot,
+} from './lib/libraryState';
+import {
+  buildPlaybackOrder,
+  cycleRepeatMode,
+  resolveManualNext,
+  resolveManualPrevious,
+  resolveSimulatedTrackEnd,
+  syncPlaybackOrder,
+} from './lib/playbackSim';
+import { loadPersistedState, savePersistedState } from './lib/storage';
 import { HomeScreen } from './screens/HomeScreen';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { NowPlayingScreen } from './screens/NowPlayingScreen';
@@ -37,6 +55,18 @@ interface ActionMenuTarget {
   song: Song;
   rect: DOMRect;
 }
+
+interface ToastState {
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}
+
+type ConfirmRequest =
+  | { kind: 'remove-single'; song: Song }
+  | { kind: 'remove-bulk'; songIds: string[] }
+  | { kind: 'recommend-less-single'; song: Song }
+  | { kind: 'recommend-less-bulk'; songIds: string[] };
 
 export default function App() {
   const prefersReducedMotion = useReducedMotion();
@@ -47,24 +77,43 @@ export default function App() {
     setPortalContainer(portalContainerRef.current);
   }, []);
 
-  // Single canonical song dataset (starts with exactly 83 records)
-  const [songs, setSongs] = useState<Song[]>(() => INITIAL_SONGS);
+  // Hydrate once synchronously from versioned localStorage (music_pwa_state_v1)
+  const initialPersistedRef = useRef<ReturnType<typeof loadPersistedState> | undefined>(
+    undefined
+  );
+  if (initialPersistedRef.current === undefined) {
+    initialPersistedRef.current = loadPersistedState(INITIAL_SONGS);
+  }
+  const initialPersisted = initialPersistedRef.current;
+
+  // Single canonical song dataset (starts with exactly 83 records on fresh boot)
+  const [songs, setSongs] = useState<Song[]>(
+    () => initialPersisted?.songs ?? INITIAL_SONGS
+  );
   const demoIndexRef = useRef(0);
 
   // Navigation & persistent chrome state
   const [activeTab, setActiveTab] = useState<AppTab>('home');
+  const [libraryScrollToTopSignal, setLibraryScrollToTopSignal] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 
   // Settings (strictly Location & Haptic Feedback only)
-  const [locationEnabled, setLocationEnabled] = useState(true);
-  const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [locationEnabled, setLocationEnabled] = useState(
+    () => initialPersisted?.locationEnabled ?? true
+  );
+  const [hapticEnabled, setHapticEnabled] = useState(
+    () => initialPersisted?.hapticEnabled ?? true
+  );
 
   // Library sort, search, quick filter & advanced Explore state
-  const [sort, setSort] = useState<SortConfig>({
-    field: 'dateFound',
-    order: 'newest',
-  });
+  const [sort, setSort] = useState<SortConfig>(
+    () =>
+      initialPersisted?.sort ?? {
+        field: 'dateFound',
+        order: 'newest',
+      }
+  );
   const [librarySearchQuery, setLibrarySearchQuery] = useState('');
 
   const [quickFilter, setQuickFilter] = useState<QuickFilterState>({
@@ -89,34 +138,105 @@ export default function App() {
 
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedSongIds, setSelectedSongIds] = useState<Set<string>>(() => new Set());
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => new Set());
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(
+    () => new Set(initialPersisted?.favoriteIds ?? ['song-001', 'song-003'])
+  );
+  // Distinct Library-level Archive view/filter (never a 6th Explore category) & Recommend Less flags
+  const [archivedIds, setArchivedIds] = useState<Set<string>>(
+    () => new Set(initialPersisted?.archivedIds ?? [])
+  );
+  const [recommendedLessIds, setRecommendedLessIds] = useState<Set<string>>(
+    () => new Set(initialPersisted?.recommendedLessIds ?? [])
+  );
+  const [viewingArchived, setViewingArchived] = useState(false);
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
 
-  // Music Player & local playlists state
+  // Music Player & local playlists state (100% simulated playback timer)
   const [playerOpen, setPlayerOpen] = useState(false);
   const [currentSongId, setCurrentSongId] = useState<string | null>(null);
   const [playerQueueIds, setPlayerQueueIds] = useState<string[]>([]);
+  const [shuffledOrderIds, setShuffledOrderIds] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isShuffled, setIsShuffled] = useState(false);
+  const [isShuffled, setIsShuffled] = useState(
+    () => initialPersisted?.isShuffled ?? false
+  );
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(
+    () => initialPersisted?.repeatMode ?? 'off'
+  );
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const playHistoryRef = useRef<string[]>([]);
 
-  const [playlists, setPlaylists] = useState<Playlist[]>(() => INITIAL_PLAYLISTS);
+  const [playlists, setPlaylists] = useState<Playlist[]>(
+    () => initialPersisted?.playlists ?? INITIAL_PLAYLISTS
+  );
   const [playlistPickerOpen, setPlaylistPickerOpen] = useState(false);
   const [playlistPickerSongIds, setPlaylistPickerSongIds] = useState<string[]>([]);
 
-  // Transient subtle feedback toast
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Debounced versioned persistence to localStorage (graceful fallback on quota/private-mode)
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      savePersistedState({
+        version: 1,
+        songs,
+        favoriteIds: Array.from(favoriteIds),
+        archivedIds: Array.from(archivedIds),
+        recommendedLessIds: Array.from(recommendedLessIds),
+        playlists,
+        locationEnabled,
+        hapticEnabled,
+        sort,
+        isShuffled,
+        repeatMode,
+      });
+    }, 150);
+
+    return () => window.clearTimeout(timerId);
+  }, [
+    songs,
+    favoriteIds,
+    archivedIds,
+    recommendedLessIds,
+    playlists,
+    locationEnabled,
+    hapticEnabled,
+    sort,
+    isShuffled,
+    repeatMode,
+  ]);
+
+  // Transient subtle feedback toast (supports actionable Undo pill)
+  const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
+  const dismissToast = useCallback(() => {
     if (toastTimerRef.current !== null) {
       window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
     }
-    toastTimerRef.current = window.setTimeout(() => {
-      setToastMessage(null);
-    }, 2400);
+    setToast(null);
   }, []);
+
+  const showToast = useCallback(
+    (
+      message: string,
+      options?: { actionLabel?: string; onAction?: () => void; durationMs?: number }
+    ) => {
+      setToast({
+        message,
+        actionLabel: options?.actionLabel,
+        onAction: options?.onAction,
+      });
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+      const duration = options?.durationMs ?? (options?.actionLabel ? 4000 : 2400);
+      toastTimerRef.current = window.setTimeout(() => {
+        setToast(null);
+        toastTimerRef.current = null;
+      }, duration);
+    },
+    []
+  );
 
   useEffect(() => {
     return () => {
@@ -125,6 +245,22 @@ export default function App() {
       }
     };
   }, []);
+
+  const activeSongs = useMemo(
+    () => songs.filter((s) => !archivedIds.has(s.id)),
+    [songs, archivedIds]
+  );
+
+  const archivedSongs = useMemo(
+    () => songs.filter((s) => archivedIds.has(s.id)),
+    [songs, archivedIds]
+  );
+
+  useEffect(() => {
+    if (viewingArchived && archivedIds.size === 0) {
+      setViewingArchived(false);
+    }
+  }, [viewingArchived, archivedIds.size]);
 
   const triggerHaptic = useCallback(() => {
     if (!hapticEnabled) return;
@@ -206,6 +342,8 @@ export default function App() {
 
   const handleClearExploreDraftFilters = useCallback(() => {
     setExploreDraftFilters(EMPTY_EXPLORE_FILTERS);
+    setAppliedExploreFilters(EMPTY_EXPLORE_FILTERS);
+    setIsAdvancedResultsActive(false);
   }, []);
 
   const handleOpenExplore = useCallback(() => {
@@ -266,28 +404,143 @@ export default function App() {
     setIsMultiSelectMode(true);
   }, []);
 
-  const handleRemoveSingleSong = useCallback(
+  const requestRemoveSingleSong = useCallback(
     (songId: string) => {
       const target = songs.find((s) => s.id === songId);
-      setSongs((prev) => prev.filter((s) => s.id !== songId));
-      setSelectedSongIds((prev) => {
-        if (!prev.has(songId)) return prev;
-        const next = new Set(prev);
-        next.delete(songId);
-        return next;
-      });
-      setPlaylists((prev) =>
-        prev.map((pl) =>
-          pl.songIds.includes(songId)
-            ? { ...pl, songIds: pl.songIds.filter((id) => id !== songId) }
-            : pl
-        )
-      );
-      if (target) {
-        showToast(`Removed "${target.title}" from Library`);
-      }
+      if (!target) return;
+      setConfirmRequest({ kind: 'remove-single', song: target });
     },
-    [songs, showToast]
+    [songs]
+  );
+
+  const executeRemoveSongs = useCallback(
+    (targetIds: string[], exitMultiSelectAfter: boolean) => {
+      if (targetIds.length === 0) return;
+      const { nextSongs, nextPlaylists, snapshot } = removeSongsWithSnapshot(
+        songs,
+        playlists,
+        targetIds
+      );
+      if (snapshot.removedEntries.length === 0) return;
+
+      const previouslyArchivedIds = targetIds.filter((id) => archivedIds.has(id));
+      triggerHaptic();
+      setSongs(nextSongs);
+      setPlaylists(nextPlaylists);
+      setArchivedIds((prev) => removeIdsFromSet(prev, targetIds));
+      setRecommendedLessIds((prev) => removeIdsFromSet(prev, targetIds));
+      setSelectedSongIds((prev) => removeIdsFromSet(prev, targetIds));
+      if (exitMultiSelectAfter) {
+        setIsMultiSelectMode(false);
+        setSelectedSongIds(new Set());
+      }
+
+      const count = snapshot.removedEntries.length;
+      const label =
+        count === 1
+          ? `Removed "${snapshot.removedEntries[0].song.title}"`
+          : `Removed ${count} songs from Library`;
+
+      showToast(label, {
+        actionLabel: 'Undo',
+        durationMs: 4000,
+        onAction: () => {
+          setSongs((currSongs) => {
+            const { restoredSongs } = restoreSongsFromSnapshot(
+              currSongs,
+              playlists,
+              snapshot
+            );
+            return restoredSongs;
+          });
+          setPlaylists((currPlaylists) => {
+            const { restoredPlaylists } = restoreSongsFromSnapshot(
+              songs,
+              currPlaylists,
+              snapshot
+            );
+            return restoredPlaylists;
+          });
+          if (previouslyArchivedIds.length > 0) {
+            setArchivedIds((prev) => addIdsToSet(prev, previouslyArchivedIds));
+          }
+        },
+      });
+    },
+    [songs, playlists, archivedIds, triggerHaptic, showToast]
+  );
+
+  // Archive is immediate and reversible with Undo (no confirmation dialog)
+  const handleArchiveSongs = useCallback(
+    (targetIds: string[], titleForSingle?: string) => {
+      if (targetIds.length === 0) return;
+      triggerHaptic();
+      setArchivedIds((prev) => addIdsToSet(prev, targetIds));
+      setSelectedSongIds((prev) => removeIdsFromSet(prev, targetIds));
+      const count = targetIds.length;
+      const message =
+        count === 1 && titleForSingle
+          ? `Archived "${titleForSingle}"`
+          : `Archived ${count} ${count === 1 ? 'song' : 'songs'}`;
+      showToast(message, {
+        actionLabel: 'Undo',
+        durationMs: 4000,
+        onAction: () => {
+          setArchivedIds((prev) => removeIdsFromSet(prev, targetIds));
+        },
+      });
+    },
+    [triggerHaptic, showToast]
+  );
+
+  const handleUnarchiveSongs = useCallback(
+    (targetIds: string[], titleForSingle?: string) => {
+      if (targetIds.length === 0) return;
+      triggerHaptic();
+      setArchivedIds((prev) => removeIdsFromSet(prev, targetIds));
+      const count = targetIds.length;
+      const message =
+        count === 1 && titleForSingle
+          ? `Restored "${titleForSingle}" to Library`
+          : `Restored ${count} ${count === 1 ? 'song' : 'songs'} to Library`;
+      showToast(message, {
+        actionLabel: 'Undo',
+        durationMs: 4000,
+        onAction: () => {
+          setArchivedIds((prev) => addIdsToSet(prev, targetIds));
+        },
+      });
+    },
+    [triggerHaptic, showToast]
+  );
+
+  // Recommend Less requires lightweight confirmation before applying preference, followed by Undo toast
+  const requestRecommendLessSingle = useCallback((song: Song) => {
+    setConfirmRequest({ kind: 'recommend-less-single', song });
+  }, []);
+
+  const executeRecommendLess = useCallback(
+    (targetIds: string[], titleForSingle?: string) => {
+      if (targetIds.length === 0) return;
+      const newlyAdded = targetIds.filter((id) => !recommendedLessIds.has(id));
+      triggerHaptic();
+      setRecommendedLessIds((prev) => addIdsToSet(prev, targetIds));
+      const count = targetIds.length;
+      const message =
+        count === 1 && titleForSingle
+          ? `Recommending less like "${titleForSingle}"`
+          : `Recommending less like ${count} ${count === 1 ? 'song' : 'songs'}`;
+      showToast(message, {
+        actionLabel: 'Undo',
+        durationMs: 4000,
+        onAction: () => {
+          setRecommendedLessIds((prev) =>
+            removeIdsFromSet(prev, newlyAdded.length > 0 ? newlyAdded : targetIds)
+          );
+        },
+      });
+    },
+    [recommendedLessIds, triggerHaptic, showToast]
   );
 
   const handleApplyWrongSongCorrection = useCallback(
@@ -383,34 +636,115 @@ export default function App() {
       return;
     }
     triggerHaptic();
-    const count = selectedSongIds.size;
-    const removedSet = new Set(selectedSongIds);
-    setSongs((prev) => prev.filter((s) => !removedSet.has(s.id)));
-    setPlaylists((prev) =>
-      prev.map((pl) => ({
-        ...pl,
-        songIds: pl.songIds.filter((id) => !removedSet.has(id)),
-      }))
-    );
-    setSelectedSongIds(new Set());
-    setIsMultiSelectMode(false);
-    showToast(`Removed ${count} ${count === 1 ? 'song' : 'songs'} from Library`);
+    setConfirmRequest({ kind: 'remove-bulk', songIds: Array.from(selectedSongIds) });
   }, [selectedSongIds, triggerHaptic, showToast]);
 
-  const handleBulkFavorite = useCallback(() => {
+  const selectedSongs = useMemo(
+    () => songs.filter((s) => selectedSongIds.has(s.id)),
+    [songs, selectedSongIds]
+  );
+
+  const allSelectedFavorited = useMemo(
+    () =>
+      selectedSongIds.size > 0 &&
+      Array.from(selectedSongIds).every((id) => favoriteIds.has(id)),
+    [selectedSongIds, favoriteIds]
+  );
+
+  const handleBulkToggleFavorite = useCallback(() => {
     if (selectedSongIds.size === 0) {
       showToast('Select songs to favorite');
       return;
     }
     triggerHaptic();
-    const count = selectedSongIds.size;
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      selectedSongIds.forEach((id) => next.add(id));
-      return next;
-    });
-    showToast(`Added ${count} ${count === 1 ? 'song' : 'songs'} to Favorites`);
-  }, [selectedSongIds, triggerHaptic, showToast]);
+    const ids = Array.from(selectedSongIds);
+    const count = ids.length;
+    if (allSelectedFavorited) {
+      setFavoriteIds((prev) => removeIdsFromSet(prev, ids));
+      showToast(`Removed ${count} ${count === 1 ? 'song' : 'songs'} from Liked Songs`);
+    } else {
+      setFavoriteIds((prev) => addIdsToSet(prev, ids));
+      showToast(`Added ${count} ${count === 1 ? 'song' : 'songs'} to Liked Songs`);
+    }
+  }, [selectedSongIds, allSelectedFavorited, triggerHaptic, showToast]);
+
+  const handleBulkArchiveOrRestore = useCallback(() => {
+    if (selectedSongIds.size === 0) {
+      showToast('Select songs first');
+      return;
+    }
+    const ids = Array.from(selectedSongIds);
+    const singleTitle = ids.length === 1 ? selectedSongs[0]?.title : undefined;
+    if (viewingArchived) {
+      handleUnarchiveSongs(ids, singleTitle);
+    } else {
+      handleArchiveSongs(ids, singleTitle);
+    }
+    setIsMultiSelectMode(false);
+    setSelectedSongIds(new Set());
+  }, [
+    selectedSongIds,
+    selectedSongs,
+    viewingArchived,
+    handleArchiveSongs,
+    handleUnarchiveSongs,
+    showToast,
+  ]);
+
+  const handleBulkRecommendLess = useCallback(() => {
+    if (selectedSongIds.size === 0) {
+      showToast('Select songs first');
+      return;
+    }
+    triggerHaptic();
+    const ids = Array.from(selectedSongIds);
+    if (ids.length === 1 && selectedSongs[0]) {
+      setConfirmRequest({ kind: 'recommend-less-single', song: selectedSongs[0] });
+    } else {
+      setConfirmRequest({ kind: 'recommend-less-bulk', songIds: ids });
+    }
+  }, [selectedSongIds, selectedSongs, triggerHaptic, showToast]);
+
+  const handleBulkGoToCategory = useCallback(
+    (category: 'artists' | 'genres') => {
+      const nav = resolveMultiSelectCategoryNav(selectedSongs, category);
+      if (nav.mode === 'empty') {
+        showToast(
+          category === 'artists'
+            ? 'Select songs to view artist'
+            : 'Select songs to view genre'
+        );
+        return;
+      }
+
+      triggerHaptic();
+      setViewingArchived(false);
+      setIsMultiSelectMode(false);
+      setSelectedSongIds(new Set());
+
+      if (nav.mode === 'direct') {
+        if (category === 'artists') {
+          handleGoToArtist(nav.value);
+        } else {
+          handleGoToGenre(nav.value);
+        }
+        return;
+      }
+
+      // Multiple unique values -> open Explore pre-populated with ALL selected values using OR-within-category logic
+      setQuickFilter({
+        openCategory: null,
+        selectedCategory: null,
+        selectedValue: null,
+      });
+      setExploreDraftFilters({
+        ...EMPTY_EXPLORE_FILTERS,
+        [category]: nav.values,
+      });
+      setExploreOpen(true);
+    },
+    [selectedSongs, triggerHaptic, showToast, handleGoToArtist, handleGoToGenre]
+  );
 
   // Bulk Add to Collection connects directly to the shared PlaylistPickerSheet
   const handleBulkAddToCollection = useCallback(() => {
@@ -426,13 +760,16 @@ export default function App() {
   const handleSelectTab = useCallback(
     (tab: AppTab) => {
       triggerHaptic();
+      if (tab === 'library' && activeTab === 'library') {
+        setLibraryScrollToTopSignal((n) => n + 1);
+      }
       if (tab !== 'library' && isMultiSelectMode) {
         setIsMultiSelectMode(false);
         setSelectedSongIds(new Set());
       }
       setActiveTab(tab);
     },
-    [triggerHaptic, isMultiSelectMode]
+    [activeTab, triggerHaptic, isMultiSelectMode]
   );
 
   const currentSong = useMemo(
@@ -453,11 +790,26 @@ export default function App() {
     }
   }, [playerOpen, currentSongId, currentSong]);
 
+  const validQueueIds = useMemo(() => {
+    const existingSongIds = new Set(songs.map((s) => s.id));
+    const base =
+      playerQueueIds.length > 0 ? playerQueueIds : activeSongs.map((s) => s.id);
+    return base.filter((id) => existingSongIds.has(id));
+  }, [playerQueueIds, songs, activeSongs]);
+
+  const activePlaybackSequence = useMemo(() => {
+    if (!isShuffled) return validQueueIds;
+    return syncPlaybackOrder(shuffledOrderIds, validQueueIds);
+  }, [isShuffled, shuffledOrderIds, validQueueIds]);
+
   const handleOpenPlayer = useCallback(
     (song: Song, queue?: Song[]) => {
       const nextQueueIds =
-        queue && queue.length > 0 ? queue.map((s) => s.id) : songs.map((s) => s.id);
+        queue && queue.length > 0 ? queue.map((s) => s.id) : activeSongs.map((s) => s.id);
       setPlayerQueueIds(nextQueueIds);
+      if (isShuffled) {
+        setShuffledOrderIds(buildPlaybackOrder(nextQueueIds, song.id, true));
+      }
       if (currentSongId !== song.id) {
         if (currentSongId) {
           playHistoryRef.current = [...playHistoryRef.current.slice(-24), currentSongId];
@@ -468,35 +820,50 @@ export default function App() {
       setIsPlaying(true);
       setPlayerOpen(true);
     },
-    [songs, currentSongId]
+    [activeSongs, currentSongId, isShuffled]
   );
 
+  const handleToggleShuffle = useCallback(() => {
+    setIsShuffled((prev) => {
+      const next = !prev;
+      if (next) {
+        setShuffledOrderIds(buildPlaybackOrder(validQueueIds, currentSongId, true));
+      }
+      return next;
+    });
+  }, [validQueueIds, currentSongId]);
+
+  const handleCycleRepeat = useCallback(() => {
+    setRepeatMode((prev) => cycleRepeatMode(prev));
+  }, []);
+
+  const handleTogglePlay = useCallback(() => {
+    setIsPlaying((prev) => {
+      if (!prev && currentSong) {
+        const duration = getSongDurationSeconds(currentSong.id);
+        if (elapsedSeconds >= duration) {
+          setElapsedSeconds(0);
+        }
+      }
+      return !prev;
+    });
+  }, [currentSong, elapsedSeconds]);
+
   const handleNextTrack = useCallback(() => {
-    const activeQueue = (playerQueueIds.length > 0 ? playerQueueIds : songs.map((s) => s.id)).filter(
-      (id) => songs.some((s) => s.id === id)
+    if (activePlaybackSequence.length === 0) return;
+    const { nextSongId, nextElapsed } = resolveManualNext(
+      currentSongId,
+      activePlaybackSequence
     );
-    if (activeQueue.length === 0) return;
-
-    const currentIdx = currentSongId ? activeQueue.indexOf(currentSongId) : -1;
-    let nextId: string;
-
-    if (isShuffled && activeQueue.length > 1) {
-      const candidates = activeQueue.filter((id) => id !== currentSongId);
-      nextId = candidates[Math.floor(Math.random() * candidates.length)];
-    } else {
-      const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % activeQueue.length : 0;
-      nextId = activeQueue[nextIdx];
-    }
-
-    if (currentSongId) {
+    if (!nextSongId) return;
+    if (currentSongId && nextSongId !== currentSongId) {
       playHistoryRef.current = [...playHistoryRef.current.slice(-24), currentSongId];
     }
-    setCurrentSongId(nextId);
-    setElapsedSeconds(0);
-  }, [playerQueueIds, songs, currentSongId, isShuffled]);
+    setCurrentSongId(nextSongId);
+    setElapsedSeconds(nextElapsed);
+  }, [activePlaybackSequence, currentSongId]);
 
   const handlePreviousTrack = useCallback(() => {
-    // Standard iOS player behaviour: restart track if past 3 seconds
     if (elapsedSeconds > 3) {
       setElapsedSeconds(0);
       return;
@@ -513,36 +880,50 @@ export default function App() {
       return;
     }
 
-    const activeQueue = (playerQueueIds.length > 0 ? playerQueueIds : songs.map((s) => s.id)).filter(
-      (id) => songs.some((s) => s.id === id)
+    const { nextSongId, nextElapsed } = resolveManualPrevious(
+      currentSongId,
+      activePlaybackSequence,
+      elapsedSeconds
     );
-    if (activeQueue.length === 0) return;
+    if (!nextSongId) return;
+    setCurrentSongId(nextSongId);
+    setElapsedSeconds(nextElapsed);
+  }, [elapsedSeconds, songs, currentSongId, activePlaybackSequence]);
 
-    const currentIdx = currentSongId ? activeQueue.indexOf(currentSongId) : 0;
-    const prevIdx =
-      currentIdx > 0 ? currentIdx - 1 : activeQueue.length - 1;
-    setCurrentSongId(activeQueue[prevIdx]);
-    setElapsedSeconds(0);
-  }, [elapsedSeconds, playerQueueIds, songs, currentSongId]);
-
-  // Prototype playback progress timer
+  // Simulated 250ms playback progress ticker (no real audio engine)
   useEffect(() => {
     if (!isPlaying || !currentSong) return;
     const duration = getSongDurationSeconds(currentSong.id);
 
     const intervalId = window.setInterval(() => {
-      setElapsedSeconds((prev) => {
-        const next = prev + 0.25;
-        if (next >= duration) {
-          handleNextTrack();
-          return 0;
-        }
-        return next;
-      });
+      setElapsedSeconds((prev) => Math.min(duration, prev + 0.25));
     }, 250);
 
     return () => window.clearInterval(intervalId);
-  }, [isPlaying, currentSong, handleNextTrack]);
+  }, [isPlaying, currentSong]);
+
+  // Pure end-of-track transition handling Repeat Off / All / One and Shuffle
+  useEffect(() => {
+    if (!isPlaying || !currentSong) return;
+    const duration = getSongDurationSeconds(currentSong.id);
+    if (elapsedSeconds < duration) return;
+
+    const outcome = resolveSimulatedTrackEnd({
+      currentSongId: currentSong.id,
+      activeSequence: activePlaybackSequence,
+      repeatMode,
+      currentDurationSeconds: duration,
+    });
+
+    if (outcome.nextSongId && outcome.nextSongId !== currentSong.id) {
+      playHistoryRef.current = [...playHistoryRef.current.slice(-24), currentSong.id];
+      setCurrentSongId(outcome.nextSongId);
+    }
+    setElapsedSeconds(outcome.nextElapsed);
+    if (!outcome.nextIsPlaying) {
+      setIsPlaying(false);
+    }
+  }, [isPlaying, currentSong, elapsedSeconds, activePlaybackSequence, repeatMode]);
 
   const handleToggleSingleFavorite = useCallback((songId: string) => {
     setFavoriteIds((prev) => {
@@ -624,17 +1005,17 @@ export default function App() {
           >
             {activeTab === 'home' && (
               <HomeScreen
-                recentSongs={songs}
+                recentSongs={activeSongs}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onIdentifyDemoTrack={handleIdentifyDemoTrack}
-                onSelectRecentSong={(song) => handleOpenPlayer(song, songs)}
+                onSelectRecentSong={(song) => handleOpenPlayer(song, activeSongs)}
                 onTriggerHaptic={triggerHaptic}
               />
             )}
 
             {activeTab === 'library' && (
               <LibraryScreen
-                songs={songs}
+                songs={viewingArchived ? archivedSongs : activeSongs}
                 sort={sort}
                 onChangeSort={setSort}
                 searchQuery={librarySearchQuery}
@@ -652,8 +1033,19 @@ export default function App() {
                 isMultiSelectMode={isMultiSelectMode}
                 selectedSongIds={selectedSongIds}
                 favoriteIds={favoriteIds}
+                currentSongId={currentSongId}
+                isPlaying={isPlaying}
+                archivedCount={archivedIds.size}
+                viewingArchived={viewingArchived}
+                scrollToTopSignal={libraryScrollToTopSignal}
+                onToggleViewingArchived={(next) => {
+                  setViewingArchived(next);
+                  setIsMultiSelectMode(false);
+                  setSelectedSongIds(new Set());
+                }}
                 onExitMultiSelect={handleExitMultiSelect}
                 onToggleSongSelect={handleToggleSongSelect}
+                onToggleFavorite={handleToggleSingleFavorite}
                 onSelectSong={handleOpenPlayer}
                 onOpenSongActionMenu={handleOpenSongActionMenu}
                 portalContainer={portalContainer}
@@ -665,15 +1057,24 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Bottom Chrome: Multi-Select standalone controls OR Floating Bottom Navigation + Separate Search */}
+        {/* Bottom Chrome: Multi-Select glass capsule OR Floating Bottom Navigation + Separate Search */}
         <AnimatePresence mode="wait">
           {activeTab === 'library' && isMultiSelectMode ? (
             <MultiSelectActionControls
               key="multi-select-controls"
               selectedCount={selectedSongIds.size}
+              allSelectedFavorited={allSelectedFavorited}
+              viewingArchived={viewingArchived}
               onBulkDelete={handleBulkDelete}
-              onBulkFavorite={handleBulkFavorite}
+              onBulkToggleFavorite={handleBulkToggleFavorite}
               onBulkAddToCollection={handleBulkAddToCollection}
+              onBulkArchiveOrRestore={handleBulkArchiveOrRestore}
+              onBulkRecommendLess={handleBulkRecommendLess}
+              onBulkGoToArtist={() => handleBulkGoToCategory('artists')}
+              onBulkGoToGenre={() => handleBulkGoToCategory('genres')}
+              onEmptySelectionHint={(msg) => showToast(msg)}
+              portalContainer={portalContainer}
+              onTriggerHaptic={triggerHaptic}
             />
           ) : (
             <BottomNavigation
@@ -688,10 +1089,11 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Subtle transient feedback toast */}
+        {/* Subtle transient feedback toast (supports actionable Undo pill) */}
         <AnimatePresence>
-          {toastMessage && (
+          {toast && (
             <motion.div
+              key={toast.message}
               initial={
                 prefersReducedMotion
                   ? { opacity: 0 }
@@ -710,10 +1112,24 @@ export default function App() {
               }
               role="status"
               aria-live="polite"
-              className="pointer-events-none absolute inset-x-4 top-3 z-[80] flex justify-center"
+              className="pointer-events-none absolute inset-x-4 top-[calc(var(--safe-top)+10px)] md:top-3 z-[80] flex justify-center"
             >
-              <div className="glass-popover rounded-full px-4 py-2 text-[13px] font-medium text-white shadow-lg">
-                {toastMessage}
+              <div className="pointer-events-auto glass-popover flex items-center gap-3 rounded-full px-4 py-2 text-[13px] font-medium text-white shadow-lg">
+                <span className="truncate max-w-[230px]">{toast.message}</span>
+                {toast.actionLabel && toast.onAction && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      const fn = toast.onAction;
+                      dismissToast();
+                      fn?.();
+                    }}
+                    className="pressable shrink-0 rounded-full px-2 py-0.5 text-[13px] font-semibold text-[var(--accent-blue)] hover:bg-white/[0.08] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
+                  >
+                    {toast.actionLabel}
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
@@ -752,10 +1168,10 @@ export default function App() {
         onTriggerHaptic={triggerHaptic}
       />
 
-      {/* Advanced Explore Multi-Filter Sheet (5 categories, strict AND logic) */}
+      {/* Advanced Explore Multi-Filter Sheet (strictly 5 discovery categories, OR-within / AND-across logic) */}
       <ExploreFilterSheet
         open={exploreOpen}
-        songs={songs}
+        songs={activeSongs}
         draftFilters={exploreDraftFilters}
         savedScrollTop={exploreScrollTop}
         onSaveScrollTop={setExploreScrollTop}
@@ -767,16 +1183,34 @@ export default function App() {
         onTriggerHaptic={triggerHaptic}
       />
 
-      {/* Song Long-Press Contextual Menu (Spatially anchored, exact 6 items) */}
+      {/* Song Long-Press Contextual Menu (Spatially anchored, includes Archive & Recommend Less) */}
       <SongActionMenu
         song={actionMenuTarget?.song ?? null}
         anchorRect={actionMenuTarget?.rect ?? null}
+        isArchived={
+          actionMenuTarget ? archivedIds.has(actionMenuTarget.song.id) : false
+        }
         onClose={() => setActionMenuTarget(null)}
         onSelectMode={handleEnterMultiSelectFromMenu}
-        onRemoveSong={handleRemoveSingleSong}
+        onArchiveSong={(id) => {
+          const target = songs.find((s) => s.id === id);
+          handleArchiveSongs([id], target?.title);
+        }}
+        onUnarchiveSong={(id) => {
+          const target = songs.find((s) => s.id === id);
+          handleUnarchiveSongs([id], target?.title);
+        }}
+        onRecommendLess={requestRecommendLessSingle}
+        onRemoveSong={requestRemoveSingleSong}
         onReportWrongSong={(s) => setWrongSongTarget(s)}
-        onGoToArtist={handleGoToArtist}
-        onGoToGenre={handleGoToGenre}
+        onGoToArtist={(artist) => {
+          setViewingArchived(false);
+          handleGoToArtist(artist);
+        }}
+        onGoToGenre={(genre) => {
+          setViewingArchived(false);
+          handleGoToGenre(genre);
+        }}
         onShareSong={handleShareSong}
         portalContainer={portalContainer}
       />
@@ -794,9 +1228,12 @@ export default function App() {
       <GlobalSearchOverlay
         open={globalSearchOpen}
         onOpenChange={setGlobalSearchOpen}
-        songs={songs}
+        songs={activeSongs}
         favoriteIds={favoriteIds}
-        onSelectSong={(song) => handleOpenPlayer(song, songs)}
+        currentSongId={currentSongId}
+        isPlaying={isPlaying}
+        onToggleFavorite={handleToggleSingleFavorite}
+        onSelectSong={(song) => handleOpenPlayer(song, activeSongs)}
         onOpenSongActionMenu={handleOpenSongActionMenu}
         portalContainer={portalContainer}
         onTriggerHaptic={triggerHaptic}
@@ -808,12 +1245,15 @@ export default function App() {
         song={currentSong}
         isPlaying={isPlaying}
         isShuffled={isShuffled}
+        repeatMode={repeatMode}
         isFavorite={currentSong ? favoriteIds.has(currentSong.id) : false}
+        isArchived={currentSong ? archivedIds.has(currentSong.id) : false}
         isInAnyPlaylist={isCurrentSongInAnyPlaylist}
         elapsedSeconds={elapsedSeconds}
         onClose={() => setPlayerOpen(false)}
-        onTogglePlay={() => setIsPlaying((prev) => !prev)}
-        onToggleShuffle={() => setIsShuffled((prev) => !prev)}
+        onTogglePlay={handleTogglePlay}
+        onToggleShuffle={handleToggleShuffle}
+        onCycleRepeat={handleCycleRepeat}
         onPrevious={handlePreviousTrack}
         onNext={handleNextTrack}
         onSeek={(sec) => setElapsedSeconds(sec)}
@@ -822,6 +1262,22 @@ export default function App() {
           if (!currentSong) return;
           setPlaylistPickerSongIds([currentSong.id]);
           setPlaylistPickerOpen(true);
+        }}
+        onArchiveSong={(targetSong) => {
+          handleArchiveSongs([targetSong.id], targetSong.title);
+          setPlayerOpen(false);
+          setIsPlaying(false);
+        }}
+        onUnarchiveSong={(targetSong) => {
+          handleUnarchiveSongs([targetSong.id], targetSong.title);
+        }}
+        onGoToArtist={(artist) => {
+          setPlayerOpen(false);
+          setViewingArchived(false);
+          handleGoToArtist(artist);
+        }}
+        onRecommendLess={(targetSong) => {
+          requestRecommendLessSingle(targetSong);
         }}
         portalContainer={portalContainer}
         onTriggerHaptic={triggerHaptic}
@@ -836,6 +1292,59 @@ export default function App() {
         onToggleSongsInPlaylist={handleToggleSongsInPlaylist}
         portalContainer={portalContainer}
         onTriggerHaptic={triggerHaptic}
+      />
+
+      {/* Apple-HIG Confirmation Dialog for Permanent Destructive Removals & Recommend Less */}
+      <ConfirmDialog
+        open={confirmRequest !== null}
+        title={
+          confirmRequest?.kind === 'remove-single'
+            ? 'Remove from Library?'
+            : confirmRequest?.kind === 'remove-bulk'
+              ? `Remove ${confirmRequest.songIds.length} ${confirmRequest.songIds.length === 1 ? 'Song' : 'Songs'}?`
+              : 'Recommend less like this?'
+        }
+        description={
+          confirmRequest?.kind === 'remove-single'
+            ? `"${confirmRequest.song.title}" by ${confirmRequest.song.artist} will be permanently removed from your Library and playlists.`
+            : confirmRequest?.kind === 'remove-bulk'
+              ? `${confirmRequest.songIds.length} selected ${confirmRequest.songIds.length === 1 ? 'song' : 'songs'} will be permanently removed from your Library and playlists.`
+              : confirmRequest?.kind === 'recommend-less-single'
+                ? `Fewer tracks similar to "${confirmRequest.song.title}" will be recommended.`
+                : confirmRequest?.kind === 'recommend-less-bulk'
+                  ? `Fewer tracks similar to these ${confirmRequest.songIds.length} selected ${confirmRequest.songIds.length === 1 ? 'song' : 'songs'} will be recommended.`
+                  : ''
+        }
+        confirmLabel={
+          confirmRequest?.kind === 'recommend-less-single' ||
+          confirmRequest?.kind === 'recommend-less-bulk'
+            ? 'Recommend Less'
+            : 'Remove'
+        }
+        variant={
+          confirmRequest?.kind === 'recommend-less-single' ||
+          confirmRequest?.kind === 'recommend-less-bulk'
+            ? 'neutral'
+            : 'destructive'
+        }
+        onCancel={() => setConfirmRequest(null)}
+        onConfirm={() => {
+          const req = confirmRequest;
+          setConfirmRequest(null);
+          if (!req) return;
+          if (req.kind === 'remove-single') {
+            executeRemoveSongs([req.song.id], false);
+          } else if (req.kind === 'remove-bulk') {
+            executeRemoveSongs(req.songIds, true);
+          } else if (req.kind === 'recommend-less-single') {
+            executeRecommendLess([req.song.id], req.song.title);
+          } else if (req.kind === 'recommend-less-bulk') {
+            executeRecommendLess(req.songIds);
+            setIsMultiSelectMode(false);
+            setSelectedSongIds(new Set());
+          }
+        }}
+        portalContainer={portalContainer}
       />
     </MobileFrame>
   );

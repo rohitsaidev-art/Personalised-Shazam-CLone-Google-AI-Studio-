@@ -1,14 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  Archive,
+  ArchiveRestore,
+  Check,
   Heart,
   ListPlus,
+  MoreHorizontal,
   Music,
   Pause,
   Play,
+  Repeat,
+  Repeat1,
   Shuffle,
   SkipBack,
   SkipForward,
+  ThumbsDown,
+  UserCircle2,
   X,
 } from 'lucide-react';
 import {
@@ -19,10 +27,12 @@ import {
   DialogPortal,
   DialogTitle,
 } from './ui/dialog';
-import { Song } from '../types/music';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { RepeatMode, Song } from '../types/music';
 import { formatDuration, getSongDurationSeconds } from '../data/playlists';
 import { AlbumCover } from './ProceduralArtwork';
 import { TRANSPORT_ICON_PROPS, UI_ICON_PROPS } from '../lib/iconConfig';
+import { useMenuKeyboardNav } from '../lib/useMenuKeyboardNav';
 import { useSheetDrag } from '../lib/useSheetDrag';
 import { cn } from '../lib/utils';
 
@@ -31,17 +41,24 @@ interface MusicPlayerSheetProps {
   song: Song | null;
   isPlaying: boolean;
   isShuffled: boolean;
+  repeatMode: RepeatMode;
   isFavorite: boolean;
+  isArchived: boolean;
   isInAnyPlaylist: boolean;
   elapsedSeconds: number;
   onClose: () => void;
   onTogglePlay: () => void;
   onToggleShuffle: () => void;
+  onCycleRepeat: () => void;
   onPrevious: () => void;
   onNext: () => void;
   onSeek: (seconds: number) => void;
   onToggleFavorite: (songId: string) => void;
   onOpenPlaylistPicker: () => void;
+  onArchiveSong: (song: Song) => void;
+  onUnarchiveSong: (song: Song) => void;
+  onGoToArtist: (artist: string) => void;
+  onRecommendLess: (song: Song) => void;
   portalContainer: HTMLElement | null;
   onTriggerHaptic?: () => void;
 }
@@ -51,23 +68,33 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
   song,
   isPlaying,
   isShuffled,
+  repeatMode,
   isFavorite,
+  isArchived,
   isInAnyPlaylist,
   elapsedSeconds,
   onClose,
   onTogglePlay,
   onToggleShuffle,
+  onCycleRepeat,
   onPrevious,
   onNext,
   onSeek,
   onToggleFavorite,
   onOpenPlaylistPicker,
+  onArchiveSong,
+  onUnarchiveSong,
+  onGoToArtist,
+  onRecommendLess,
   portalContainer,
   onTriggerHaptic,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubSeconds, setScrubSeconds] = useState(0);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const { menuRef: moreMenuRef, handleMenuKeyDown: handleMoreMenuKeyDown } =
+    useMenuKeyboardNav(moreMenuOpen, () => setMoreMenuOpen(false));
 
   const { prefersReducedMotion, startDrag, sheetMotionDragProps } = useSheetDrag({
     onDismiss: onClose,
@@ -89,6 +116,7 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
 
   useEffect(() => {
     setIsScrubbing(false);
+    setMoreMenuOpen(false);
   }, [song?.id, open]);
 
   const computeTimeFromClientX = useCallback(
@@ -140,6 +168,13 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
     }
   };
 
+  const repeatLabel =
+    repeatMode === 'one'
+      ? 'Repeat One'
+      : repeatMode === 'all'
+        ? 'Repeat All'
+        : 'Repeat Off';
+
   // Ambient artwork wash tinted from cover palette, held behind a bottom-weighted contrast veil
   const ambientTintPrimary = song?.artwork?.primary ?? '#151922';
   const ambientTintSecondary = song?.artwork?.secondary ?? '#222836';
@@ -177,7 +212,7 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                   {song.title} by {song.artist}
                 </DialogTitle>
                 <DialogDescription className="sr-only">
-                  Playback controls, favorites, and playlist actions for {song.title}
+                  Simulated playback controls, favorites, repeat, and playlist actions for {song.title}
                 </DialogDescription>
 
                 {/* Rebalanced artwork-derived ambient wash */}
@@ -194,21 +229,28 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#08090C]/28 via-[#0A0B0F]/68 to-[#090A0E]"
                 />
+                {/* Top protective dark scrim guaranteeing legibility of X, grabber, and ... over bright covers */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-[112px] bg-gradient-to-b from-black/52 via-black/14 to-transparent"
+                />
 
                 {/* Foreground Layout */}
-                <div className="relative z-10 flex h-full flex-col justify-between overflow-y-auto no-scrollbar px-6 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+28px)] md:pb-8">
-                  {/* Dedicated Drag Region 1: Sheet Grabber + Top Dismiss Affordance */}
+                <div className="relative z-10 flex h-full flex-col justify-between overflow-y-auto no-scrollbar px-6 pt-[calc(var(--safe-top)+10px)] md:pt-3 pb-[calc(var(--safe-bottom)+24px)] md:pb-8">
+                  {/* Dedicated Drag Region 1: Sheet Grabber + Top Dismiss & Overflow Controls */}
                   <div
                     onPointerDown={startDrag}
                     className="shrink-0 touch-none cursor-grab active:cursor-grabbing"
                   >
                     <div
                       aria-hidden="true"
-                      className="mx-auto mb-2 h-[4.5px] w-[40px] rounded-full bg-white/30"
+                      className="mx-auto mb-2 h-[4.5px] w-[40px] rounded-full bg-white/35"
                     />
                     <div className="flex items-center justify-between">
                       <button
                         type="button"
+                        data-no-sheet-drag="true"
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => {
                           onTriggerHaptic?.();
                           onClose();
@@ -218,6 +260,135 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                       >
                         <X size={20} {...UI_ICON_PROPS} />
                       </button>
+
+                      {/* Anchored top-right overflow popover (strictly existing-data actions, never a stacked sheet) */}
+                      <Popover open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            data-no-sheet-drag="true"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={() => onTriggerHaptic?.()}
+                            aria-label="More options"
+                            aria-haspopup="menu"
+                            aria-expanded={moreMenuOpen}
+                            className="player-control-surface pressable-strong flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--player-text-primary)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--player-accent)]"
+                          >
+                            <MoreHorizontal size={20} {...UI_ICON_PROPS} />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          container={portalContainer}
+                          align="end"
+                          sideOffset={8}
+                          className="z-[60] w-[228px] p-0 border-0 bg-transparent shadow-none"
+                        >
+                          <motion.div
+                            ref={moreMenuRef}
+                            onKeyDown={handleMoreMenuKeyDown}
+                            initial={
+                              prefersReducedMotion
+                                ? { opacity: 0 }
+                                : { opacity: 0, scale: 0.94, y: -6 }
+                            }
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            transition={
+                              prefersReducedMotion
+                                ? { duration: 0.14 }
+                                : { type: 'spring', bounce: 0, duration: 0.24 }
+                            }
+                            role="menu"
+                            aria-label={`Actions for ${song.title}`}
+                            className="glass-popover origin-top-right overflow-hidden rounded-[18px] py-1.5"
+                          >
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                onTriggerHaptic?.();
+                                setMoreMenuOpen(false);
+                                onOpenPlaylistPicker();
+                              }}
+                              className="flex w-full min-h-[44px] items-center gap-3 px-4 py-2.5 text-left text-[15px] font-medium text-white hover:bg-white/[0.08] active:bg-white/[0.12] transition-colors cursor-pointer focus-visible:outline-none focus-visible:bg-white/[0.1]"
+                            >
+                              <ListPlus
+                                size={18}
+                                {...UI_ICON_PROPS}
+                                className="shrink-0 text-white/85"
+                              />
+                              <span>Add to Playlist</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                onTriggerHaptic?.();
+                                setMoreMenuOpen(false);
+                                if (isArchived) {
+                                  onUnarchiveSong(song);
+                                } else {
+                                  onArchiveSong(song);
+                                }
+                              }}
+                              className="flex w-full min-h-[44px] items-center gap-3 px-4 py-2.5 text-left text-[15px] font-medium text-white hover:bg-white/[0.08] active:bg-white/[0.12] transition-colors cursor-pointer focus-visible:outline-none focus-visible:bg-white/[0.1]"
+                            >
+                              {isArchived ? (
+                                <ArchiveRestore
+                                  size={18}
+                                  {...UI_ICON_PROPS}
+                                  className="shrink-0 text-white/85"
+                                />
+                              ) : (
+                                <Archive
+                                  size={18}
+                                  {...UI_ICON_PROPS}
+                                  className="shrink-0 text-white/85"
+                                />
+                              )}
+                              <span>{isArchived ? 'Unarchive' : 'Archive'}</span>
+                            </button>
+
+                            <div className="my-1 h-px bg-white/[0.09]" role="separator" />
+
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                onTriggerHaptic?.();
+                                setMoreMenuOpen(false);
+                                onGoToArtist(song.artists[0] ?? song.artist);
+                              }}
+                              className="flex w-full min-h-[44px] items-center gap-3 px-4 py-2.5 text-left text-[15px] font-medium text-white hover:bg-white/[0.08] active:bg-white/[0.12] transition-colors cursor-pointer focus-visible:outline-none focus-visible:bg-white/[0.1]"
+                            >
+                              <UserCircle2
+                                size={18}
+                                {...UI_ICON_PROPS}
+                                className="shrink-0 text-white/85"
+                              />
+                              <span>Go to Artist</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                onTriggerHaptic?.();
+                                setMoreMenuOpen(false);
+                                onRecommendLess(song);
+                              }}
+                              className="flex w-full min-h-[44px] items-center gap-3 px-4 py-2.5 text-left text-[15px] font-medium text-white hover:bg-white/[0.08] active:bg-white/[0.12] transition-colors cursor-pointer focus-visible:outline-none focus-visible:bg-white/[0.1]"
+                            >
+                              <ThumbsDown
+                                size={18}
+                                {...UI_ICON_PROPS}
+                                className="shrink-0 text-white/85"
+                              />
+                              <span>Recommend Less</span>
+                            </button>
+                          </motion.div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
 
@@ -262,7 +433,7 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                     data-no-sheet-drag="true"
                     className="shrink-0 flex flex-col gap-[clamp(14px,2.4dvh,22px)]"
                   >
-                    {/* Strictly 2 Metadata Lines (Track Title + Artist) + Pink-Red Heart Toggle */}
+                    {/* Strictly 2 Metadata Lines (Track Title + Artist) + Optically Balanced Heart Toggle */}
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <h2 className="line-clamp-2 text-[24px] font-bold leading-[1.18] tracking-[-0.024em] text-[var(--player-text-primary)]">
@@ -283,28 +454,25 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                           isFavorite ? 'Remove from Favorites' : 'Add to Favorites'
                         }
                         aria-pressed={isFavorite}
-                        className={cn(
-                          'pressable-strong flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--player-accent)]',
-                          isFavorite
-                            ? 'bg-[var(--player-accent-soft)] border border-[var(--player-accent-border)] text-[var(--player-accent)]'
-                            : 'player-control-surface text-[var(--player-text-primary)]'
-                        )}
+                        className="player-control-surface pressable-strong flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--player-text-primary)] transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--player-accent)]"
                       >
                         <motion.span
                           key={isFavorite ? 'fav-on' : 'fav-off'}
-                          initial={prefersReducedMotion ? false : { scale: 0.8 }}
+                          initial={prefersReducedMotion ? false : { scale: 0.82 }}
                           animate={{ scale: 1 }}
                           transition={{ type: 'spring', bounce: 0.2, duration: 0.28 }}
                           className="flex items-center justify-center"
                         >
                           <Heart
                             size={20}
-                            {...UI_ICON_PROPS}
+                            strokeWidth={isFavorite ? 1.65 : 1.85}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                             className={cn(
-                              'transition-colors duration-150',
+                              'transition-[color,fill,transform] duration-150',
                               isFavorite
-                                ? 'fill-[var(--player-accent)] text-[var(--player-accent)]'
-                                : 'fill-transparent text-[var(--player-text-primary)]'
+                                ? 'scale-[0.93] fill-[var(--player-accent)] text-[var(--player-accent)]'
+                                : 'scale-100 fill-transparent text-[var(--player-text-primary)]'
                             )}
                           />
                         </motion.span>
@@ -354,21 +522,21 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                       </div>
                     </div>
 
-                    {/* Transport Controls — Shuffle | Previous | Play/Pause | Next */}
+                    {/* Transport Controls — Shuffle | Previous | Play/Pause | Next | Repeat */}
                     <div className="flex items-center justify-between px-1">
-                      {/* 1. Shuffle (Pink-Red active state with fill, border, dot & aria-pressed) */}
+                      {/* 1. Shuffle (White/neutral active state — zero pink-red) */}
                       <button
                         type="button"
                         onClick={() => {
                           onTriggerHaptic?.();
                           onToggleShuffle();
                         }}
-                        aria-label={isShuffled ? 'Shuffle On' : 'Shuffle'}
+                        aria-label={isShuffled ? 'Shuffle On' : 'Shuffle Off'}
                         aria-pressed={isShuffled}
                         className={cn(
-                          'pressable-strong relative flex h-[44px] w-[44px] items-center justify-center rounded-full transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--player-accent)]',
+                          'pressable-strong relative flex h-[44px] w-[44px] items-center justify-center rounded-full transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
                           isShuffled
-                            ? 'bg-[var(--player-accent-soft)] border border-[var(--player-accent-border)] text-[var(--player-accent)]'
+                            ? 'bg-white text-[#0A0B0E] shadow-[0_4px_14px_rgba(255,255,255,0.18)]'
                             : 'player-control-surface text-[var(--player-text-secondary)] hover:text-[var(--player-text-primary)]'
                         )}
                       >
@@ -376,7 +544,7 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                         {isShuffled && (
                           <span
                             aria-hidden="true"
-                            className="absolute -bottom-1.5 h-[4px] w-[4px] rounded-full bg-[var(--player-accent)]"
+                            className="absolute -bottom-2 h-[4px] w-[4px] rounded-full bg-white"
                           />
                         )}
                       </button>
@@ -389,7 +557,7 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                           onPrevious();
                         }}
                         aria-label="Previous Track"
-                        className="pressable-strong flex h-[48px] w-[48px] items-center justify-center rounded-full text-[var(--player-text-primary)]/90 hover:text-[var(--player-text-primary)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--player-accent)]"
+                        className="pressable-strong flex h-[48px] w-[48px] items-center justify-center rounded-full text-[var(--player-text-primary)]/90 hover:text-[var(--player-text-primary)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                       >
                         <SkipBack size={26} {...TRANSPORT_ICON_PROPS} className="fill-current" />
                       </button>
@@ -402,7 +570,7 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                           onTogglePlay();
                         }}
                         aria-label={isPlaying ? 'Pause' : 'Play'}
-                        className="pressable-strong flex h-[68px] w-[68px] items-center justify-center rounded-full bg-white text-[#0A0B0E] shadow-[0_10px_28px_rgba(0,0,0,0.48)] hover:bg-white/95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--player-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--player-bg)]"
+                        className="pressable-strong flex h-[68px] w-[68px] items-center justify-center rounded-full bg-white text-[#0A0B0E] shadow-[0_10px_28px_rgba(0,0,0,0.48)] hover:bg-white/95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--player-bg)]"
                       >
                         {isPlaying ? (
                           <Pause size={28} {...TRANSPORT_ICON_PROPS} className="fill-current" />
@@ -423,16 +591,42 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                           onNext();
                         }}
                         aria-label="Next Track"
-                        className="pressable-strong flex h-[48px] w-[48px] items-center justify-center rounded-full text-[var(--player-text-primary)]/90 hover:text-[var(--player-text-primary)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--player-accent)]"
+                        className="pressable-strong flex h-[48px] w-[48px] items-center justify-center rounded-full text-[var(--player-text-primary)]/90 hover:text-[var(--player-text-primary)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                       >
                         <SkipForward size={26} {...TRANSPORT_ICON_PROPS} className="fill-current" />
                       </button>
 
-                      {/* Optical balancing spacer keeping Play/Pause centered beneath square artwork */}
-                      <div className="h-[44px] w-[44px] shrink-0" aria-hidden="true" />
+                      {/* 5. Repeat (Off -> All -> One, white/neutral active state — zero pink-red) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onTriggerHaptic?.();
+                          onCycleRepeat();
+                        }}
+                        aria-label={repeatLabel}
+                        aria-pressed={repeatMode !== 'off'}
+                        className={cn(
+                          'pressable-strong relative flex h-[44px] w-[44px] items-center justify-center rounded-full transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
+                          repeatMode !== 'off'
+                            ? 'bg-white text-[#0A0B0E] shadow-[0_4px_14px_rgba(255,255,255,0.18)]'
+                            : 'player-control-surface text-[var(--player-text-secondary)] hover:text-[var(--player-text-primary)]'
+                        )}
+                      >
+                        {repeatMode === 'one' ? (
+                          <Repeat1 size={19} {...UI_ICON_PROPS} />
+                        ) : (
+                          <Repeat size={19} {...UI_ICON_PROPS} />
+                        )}
+                        {repeatMode !== 'off' && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute -bottom-2 h-[4px] w-[4px] rounded-full bg-white"
+                          />
+                        )}
+                      </button>
                     </div>
 
-                    {/* Add to Playlist Action */}
+                    {/* Add to Playlist Action (neutral glass surface) */}
                     <button
                       type="button"
                       onClick={() => {
@@ -440,22 +634,24 @@ export const MusicPlayerSheet: React.FC<MusicPlayerSheetProps> = ({
                         onOpenPlaylistPicker();
                       }}
                       className={cn(
-                        'pressable flex h-[50px] w-full items-center justify-center gap-2.5 rounded-full text-[15.5px] font-semibold tracking-[-0.01em] text-[var(--player-text-primary)] transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--player-accent)]',
-                        isInAnyPlaylist
-                          ? 'bg-[var(--player-accent-soft)] border border-[var(--player-accent-border)]'
-                          : 'player-control-surface'
+                        'player-control-surface pressable flex h-[50px] w-full items-center justify-center gap-2.5 rounded-full text-[15.5px] font-semibold tracking-[-0.01em] text-[var(--player-text-primary)] transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
+                        isInAnyPlaylist && 'border-white/25 bg-white/[0.14]'
                       )}
                     >
-                      <ListPlus
-                        size={20}
-                        {...UI_ICON_PROPS}
-                        className={
-                          isInAnyPlaylist
-                            ? 'text-[var(--player-accent)]'
-                            : 'text-[var(--player-text-primary)]/90'
-                        }
-                      />
-                      <span>Add to Playlist</span>
+                      {isInAnyPlaylist ? (
+                        <Check
+                          size={19}
+                          {...UI_ICON_PROPS}
+                          className="text-[var(--player-text-primary)]"
+                        />
+                      ) : (
+                        <ListPlus
+                          size={20}
+                          {...UI_ICON_PROPS}
+                          className="text-[var(--player-text-primary)]/90"
+                        />
+                      )}
+                      <span>{isInAnyPlaylist ? 'In Playlist' : 'Add to Playlist'}</span>
                     </button>
                   </div>
                 </div>

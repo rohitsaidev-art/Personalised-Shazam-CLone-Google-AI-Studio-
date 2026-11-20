@@ -69,7 +69,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   return (
     <div className="relative flex h-full w-full flex-col justify-between bg-[radial-gradient(ellipse_at_50%_22%,#0C2034_0%,#06101B_48%,#03060A_100%)] overflow-hidden">
       {/* Top-right Settings button (44px expanded hit target) */}
-      <div className="flex items-center justify-end px-4 pt-3">
+      <div className="flex items-center justify-end px-4 pt-[calc(var(--safe-top)+12px)] md:pt-3">
         <button
           type="button"
           onClick={() => {
@@ -173,12 +173,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </div>
 
       {/* Recently Found horizontal carousel sitting cleanly above floating bottom nav */}
-      <div className="pb-[98px]">
+      <div className="pb-[calc(var(--safe-bottom)+104px)] md:pb-[98px]">
         <h2 className="mb-3 px-5 text-[14px] font-semibold tracking-[-0.01em] text-[var(--text-secondary)]">
           Recently Found
         </h2>
 
-        <div className="flex gap-3 overflow-x-auto no-scrollbar px-4">
+        <div className="carousel-fade-right flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto no-scrollbar px-4">
           {recentSongs.slice(0, 6).map((song, idx) => {
             const timeLabel =
               idx === 0 && song.foundAt >= REFERENCE_NOW - 10 * 60 * 1000
@@ -194,7 +194,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   onTriggerHaptic?.();
                   onSelectRecentSong(song);
                 }}
-                className="pressable flex w-[306px] shrink-0 items-center gap-3 rounded-[22px] bg-[var(--surface-home-card)] p-[12px] text-left border border-white/[0.065] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
+                className="pressable snap-start flex w-[306px] shrink-0 items-center gap-3 rounded-[22px] bg-[var(--surface-home-card)] p-[12px] text-left border border-white/[0.065] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
               >
                 <AlbumCover
                   artwork={song.artwork}

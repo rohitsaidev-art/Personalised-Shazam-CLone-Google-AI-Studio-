@@ -69,17 +69,17 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   return (
     <div
       className={cn(
-        'pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col items-center px-4 pb-5 pt-9',
+        'pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col items-center px-4 pb-[calc(var(--safe-bottom)+10px)] md:pb-5 pt-9',
         activeTab === 'home'
           ? 'bg-gradient-to-t from-[#03060A]/80 via-[#03060A]/25 to-transparent'
           : 'bg-gradient-to-t from-black/82 via-black/40 to-transparent'
       )}
     >
       <div className="pointer-events-auto flex w-full items-center gap-[10px]">
-        {/* Floating bottom navigation pill: strictly Home · Library · Now Playing (58px matched to Search circle) */}
+        {/* Floating bottom navigation pill: strictly Home · Library · Now Playing */}
         <nav
           aria-label="Primary Navigation"
-          className="glass-pill relative flex h-[58px] flex-1 items-center rounded-full p-[4px]"
+          className="glass-pill relative flex h-[62px] md:h-[58px] flex-1 items-center rounded-full p-[4px]"
         >
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -121,12 +121,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           })}
         </nav>
 
-        {/* Separate circular global Search action — exact 58×58 height match to navigation pill */}
+        {/* Separate circular global Search action — exact height match to navigation pill */}
         <button
           type="button"
           onClick={onOpenGlobalSearch}
           aria-label="Search Library"
-          className="glass-pill pressable-strong flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
+          className="glass-pill pressable-strong flex h-[62px] w-[62px] md:h-[58px] md:w-[58px] shrink-0 items-center justify-center rounded-full text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]"
         >
           <Search size={22} {...UI_ICON_PROPS} />
         </button>

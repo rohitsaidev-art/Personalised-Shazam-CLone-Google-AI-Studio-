@@ -1,5 +1,7 @@
 export type AppTab = 'home' | 'library' | 'now-playing';
 
+export type RepeatMode = 'off' | 'all' | 'one';
+
 export type SortField = 'dateFound' | 'title' | 'artist';
 export type SortOrder = 'newest' | 'oldest';
 
@@ -60,7 +62,6 @@ export interface Song {
   moods: string[];
   decade: string;
   artwork: ArtworkSpec;
-  hasAppleMusicBadge?: boolean;
 }
 
 export interface CandidateCorrection {

@@ -239,7 +239,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'20s",
     artwork: { primary: '#243547', secondary: '#607B96', accent: '#C8D6E5', pattern: 'clock' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-002',
@@ -253,7 +252,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic'],
     decade: "'10s",
     artwork: { primary: '#473311', secondary: '#C89B3C', accent: '#F5DF98', pattern: 'gold-baroque' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-003',
@@ -266,7 +264,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Upbeat'],
     decade: "'20s",
     artwork: { primary: '#7A0C12', secondary: '#D92626', accent: '#F2E9E4', pattern: 'crimson-poster', monogram: 'JAILER' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-004',
@@ -280,7 +277,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Focus'],
     decade: "'20s",
     artwork: { primary: '#06080D', secondary: '#1B2433', accent: '#9BB4D6', pattern: 'noir-type', monogram: 'CRIME?' },
-    hasAppleMusicBadge: true,
   },
 
   // === LAST WEEK (4 songs — matching "Last Week" & "So High" visible at bottom of boards) ===
@@ -296,7 +292,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Chill', 'Romantic'],
     decade: "'10s",
     artwork: { primary: '#3A1C35', secondary: '#A2487A', accent: '#F3B6D3', pattern: 'bloom' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-006',
@@ -309,7 +304,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Upbeat'],
     decade: "'20s",
     artwork: { primary: '#2B1F2E', secondary: '#7D4F69', accent: '#F5D6BA', pattern: 'vinyl' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-007',
@@ -322,7 +316,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Upbeat'],
     decade: "'20s",
     artwork: { primary: '#3D0808', secondary: '#C1121F', accent: '#FDF0D5', pattern: 'monolith' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-008',
@@ -335,7 +328,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Upbeat'],
     decade: "'10s",
     artwork: { primary: '#1B2845', secondary: '#274060', accent: '#FFD166', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
 
   // === PRITAM (EXACTLY 5 songs — matches board 03 right screen: 5 songs) ===
@@ -350,7 +342,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Romantic'],
     decade: "'20s",
     artwork: { primary: '#2E1420', secondary: '#8E3A59', accent: '#F2B5C4', pattern: 'crimson-poster', monogram: 'LOVE' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-010',
@@ -363,7 +354,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'10s",
     artwork: { primary: '#2C1B0E', secondary: '#C67D2E', accent: '#FCE38A', pattern: 'gold-baroque' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-011',
@@ -376,7 +366,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Chill', 'Focus'],
     decade: "'20s",
     artwork: { primary: '#2B2B30', secondary: '#6D6875', accent: '#E8E4DF', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-012',
@@ -389,7 +378,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Upbeat'],
     decade: "'20s",
     artwork: { primary: '#4D1900', secondary: '#E85D04', accent: '#FFBA08', pattern: 'bloom' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-013',
@@ -402,7 +390,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Melancholic'],
     decade: "'20s",
     artwork: { primary: '#1F1A38', secondary: '#7B506F', accent: '#DD99BB', pattern: 'rings' },
-    hasAppleMusicBadge: true,
   },
 
   // === ANNE AMIE + ALTERNATIVE + HYDERABAD (EXACTLY 24 songs — matches board 04 right screen) ===
@@ -417,7 +404,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: item.moods,
     decade: item.decade,
     artwork: item.artwork,
-    hasAppleMusicBadge: true,
   })),
 
   // === 3 EXTRA ANNE AMIE TRACKS (NOT matching all 3 criteria — verifies live AND delta!) ===
@@ -432,7 +418,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'10s",
     artwork: { primary: '#16262E', secondary: '#2E4756', accent: '#9FA2B2', pattern: 'waves' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-039',
@@ -445,7 +430,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Chill', 'Focus'],
     decade: "'20s",
     artwork: { primary: '#232931', secondary: '#4ECCA3', accent: '#EEEEEE', pattern: 'vinyl' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-040',
@@ -458,7 +442,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Romantic'],
     decade: "'10s",
     artwork: { primary: '#1E1B2E', secondary: '#6A4C93', accent: '#F7D08A', pattern: 'prism' },
-    hasAppleMusicBadge: true,
   },
 
   // === REMAINING 43 DIVERSE LIBRARY TRACKS (Total: 40 + 43 = 83 songs EXACTLY) ===
@@ -473,7 +456,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Chill', 'Romantic'],
     decade: "'20s",
     artwork: { primary: '#291720', secondary: '#D90368', accent: '#FFD400', pattern: 'bloom' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-042',
@@ -486,7 +468,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Chill'],
     decade: "'10s",
     artwork: { primary: '#1B1B3A', secondary: '#693668', accent: '#F896D8', pattern: 'rings' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-043',
@@ -499,7 +480,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Focus'],
     decade: "'20s",
     artwork: { primary: '#0C0F1D', secondary: '#3A0CA3', accent: '#4CC9F0', pattern: 'prism' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-044',
@@ -512,7 +492,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Upbeat'],
     decade: "'20s",
     artwork: { primary: '#10002B', secondary: '#7B2CBF', accent: '#E0AAFF', pattern: 'monolith' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-045',
@@ -525,7 +504,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'00s",
     artwork: { primary: '#283618', secondary: '#606C38', accent: '#DDA15E', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-046',
@@ -538,7 +516,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Romantic'],
     decade: "'10s",
     artwork: { primary: '#331E36', secondary: '#7B4B94', accent: '#D8B4E2', pattern: 'vinyl' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-047',
@@ -551,7 +528,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Chill'],
     decade: "'10s",
     artwork: { primary: '#22223B', secondary: '#4A4E69', accent: '#C9ADA7', pattern: 'waves' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-048',
@@ -564,7 +540,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Energetic'],
     decade: "'10s",
     artwork: { primary: '#2B2118', secondary: '#A8763E', accent: '#F7F3E3', pattern: 'vinyl' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-049',
@@ -577,7 +552,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Focus'],
     decade: "'10s",
     artwork: { primary: '#131515', secondary: '#339989', accent: '#7DE2D1', pattern: 'waves' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-050',
@@ -590,7 +564,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Upbeat'],
     decade: "'20s",
     artwork: { primary: '#4F000B', secondary: '#CE4257', accent: '#FF9B54', pattern: 'prism' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-051',
@@ -603,7 +576,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'10s",
     artwork: { primary: '#3B1F2B', secondary: '#DB162F', accent: '#F7B538', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-052',
@@ -616,7 +588,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Melancholic'],
     decade: "'10s",
     artwork: { primary: '#1D2D44', secondary: '#748CAB', accent: '#F0EBD8', pattern: 'rings' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-053',
@@ -629,7 +600,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Energetic'],
     decade: "'10s",
     artwork: { primary: '#3C096C', secondary: '#9D4EDD', accent: '#FF9E00', pattern: 'bloom' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-054',
@@ -642,7 +612,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Romantic'],
     decade: "'10s",
     artwork: { primary: '#0F172A', secondary: '#38BDF8', accent: '#E0F2FE', pattern: 'waves' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-055',
@@ -655,7 +624,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'00s",
     artwork: { primary: '#2D1E2F', secondary: '#A93F55', accent: '#F7E3AF', pattern: 'vinyl' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-056',
@@ -668,7 +636,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Energetic'],
     decade: "'10s",
     artwork: { primary: '#432818', secondary: '#BB9457', accent: '#FFE6A7', pattern: 'gold-baroque' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-057',
@@ -681,7 +648,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Upbeat'],
     decade: "'00s",
     artwork: { primary: '#1E2A38', secondary: '#4E8098', accent: '#FCF7F8', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-058',
@@ -694,7 +660,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Energetic'],
     decade: "'00s",
     artwork: { primary: '#083D77', secondary: '#3DA5D9', accent: '#EBEBD3', pattern: 'waves' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-059',
@@ -707,7 +672,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Melancholic'],
     decade: "'10s",
     artwork: { primary: '#121619', secondary: '#2D4739', accent: '#9AD4D6', pattern: 'monolith' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-060',
@@ -720,7 +684,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Romantic'],
     decade: "'10s",
     artwork: { primary: '#3D2C2E', secondary: '#B07BAC', accent: '#F5D0C5', pattern: 'bloom' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-061',
@@ -733,7 +696,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'20s",
     artwork: { primary: '#1A233A', secondary: '#415A77', accent: '#E0C097', pattern: 'clock' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-062',
@@ -746,7 +708,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Chill', 'Upbeat'],
     decade: "'20s",
     artwork: { primary: '#2F3E46', secondary: '#52796F', accent: '#CAD2C5', pattern: 'rings' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-063',
@@ -759,7 +720,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Romantic'],
     decade: "'20s",
     artwork: { primary: '#22181C', secondary: '#846075', accent: '#F4EAE6', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-064',
@@ -773,7 +733,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Upbeat'],
     decade: "'10s",
     artwork: { primary: '#3B2F12', secondary: '#B08D2C', accent: '#F7E7A1', pattern: 'gold-baroque' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-065',
@@ -787,7 +746,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic'],
     decade: "'10s",
     artwork: { primary: '#33260F', secondary: '#C59B27', accent: '#FFF1B8', pattern: 'gold-baroque' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-066',
@@ -801,7 +759,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Focus', 'Melancholic'],
     decade: "'20s",
     artwork: { primary: '#090D16', secondary: '#263859', accent: '#6B778D', pattern: 'noir-type', monogram: 'COLD' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-067',
@@ -814,7 +771,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Chill', 'Focus'],
     decade: "'20s",
     artwork: { primary: '#0B0C10', secondary: '#1F2833', accent: '#66FCF1', pattern: 'monolith' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-068',
@@ -827,7 +783,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Romantic'],
     decade: "'20s",
     artwork: { primary: '#3D155F', secondary: '#DF678C', accent: '#F7D08A', pattern: 'bloom' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-069',
@@ -840,7 +795,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'10s",
     artwork: { primary: '#1E3D59', secondary: '#FF6E40', accent: '#FFC13B', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-070',
@@ -853,7 +807,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Upbeat'],
     decade: "'20s",
     artwork: { primary: '#2A1A1F', secondary: '#A53860', accent: '#FFA5AB', pattern: 'rings' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-071',
@@ -866,7 +819,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Energetic'],
     decade: "'20s",
     artwork: { primary: '#4A1942', secondary: '#D84797', accent: '#FCD5CE', pattern: 'prism' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-072',
@@ -879,7 +831,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Chill', 'Focus'],
     decade: "'70s",
     artwork: { primary: '#1E1D1B', secondary: '#8C7A6B', accent: '#EAE0D5', pattern: 'vinyl' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-073',
@@ -892,7 +843,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Focus'],
     decade: "'70s",
     artwork: { primary: '#1F1B18', secondary: '#6F5E53', accent: '#D9C5B2', pattern: 'monolith' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-074',
@@ -905,7 +855,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Focus'],
     decade: "'80s",
     artwork: { primary: '#0E2433', secondary: '#2E8BC0', accent: '#B1D4E0', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-075',
@@ -918,7 +867,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Melancholic'],
     decade: "'80s",
     artwork: { primary: '#381D2A', secondary: '#A53F2B', accent: '#F39B6D', pattern: 'waves' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-076',
@@ -931,7 +879,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Chill', 'Melancholic'],
     decade: "'90s",
     artwork: { primary: '#1D1A2F', secondary: '#52489C', accent: '#EBEBEB', pattern: 'rings' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-077',
@@ -944,7 +891,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Romantic'],
     decade: "'90s",
     artwork: { primary: '#262626', secondary: '#737373', accent: '#E5E5E5', pattern: 'monolith' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-078',
@@ -957,7 +903,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Romantic', 'Chill'],
     decade: "'00s",
     artwork: { primary: '#2B2100', secondary: '#D4A017', accent: '#FFF3B0', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-079',
@@ -970,7 +915,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Melancholic', 'Focus'],
     decade: "'00s",
     artwork: { primary: '#0B132B', secondary: '#1C2541', accent: '#F4A261', pattern: 'prism' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-080',
@@ -983,7 +927,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Energetic'],
     decade: "'00s",
     artwork: { primary: '#132A13', secondary: '#4F772D', accent: '#F7B801', pattern: 'bloom' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-081',
@@ -996,7 +939,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Upbeat', 'Focus'],
     decade: "'70s",
     artwork: { primary: '#2F1B12', secondary: '#A44A3F', accent: '#F19C79', pattern: 'vinyl' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-082',
@@ -1009,7 +951,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Energetic', 'Upbeat'],
     decade: "'80s",
     artwork: { primary: '#1B263B', secondary: '#415A77', accent: '#E0E1DD', pattern: 'waves' },
-    hasAppleMusicBadge: true,
   },
   {
     id: 'song-083',
@@ -1022,7 +963,6 @@ const RAW_INITIAL_SONGS: Song[] = [
     moods: ['Focus', 'Melancholic'],
     decade: "'90s",
     artwork: { primary: '#1B1F23', secondary: '#4E5D6C', accent: '#D3D9DE', pattern: 'rings' },
-    hasAppleMusicBadge: true,
   },
 ];
 
@@ -1061,7 +1001,6 @@ export const SHAZAM_DEMO_DISCOVERIES: Array<Omit<Song, 'id' | 'foundAt' | 'city'
     moods: ['Energetic', 'Upbeat'],
     decade: "'10s",
     artwork: { primary: '#120D31', secondary: '#5E2BFF', accent: '#FF6B9D', pattern: 'prism' },
-    hasAppleMusicBadge: true,
   },
   {
     title: 'Kun Faya Kun',
@@ -1071,7 +1010,6 @@ export const SHAZAM_DEMO_DISCOVERIES: Array<Omit<Song, 'id' | 'foundAt' | 'city'
     moods: ['Chill', 'Focus'],
     decade: "'10s",
     artwork: { primary: '#2B1B17', secondary: '#B87333', accent: '#F5DEB3', pattern: 'rings' },
-    hasAppleMusicBadge: true,
   },
   {
     title: 'Pink + White',
@@ -1081,7 +1019,6 @@ export const SHAZAM_DEMO_DISCOVERIES: Array<Omit<Song, 'id' | 'foundAt' | 'city'
     moods: ['Chill', 'Romantic'],
     decade: "'10s",
     artwork: { primary: '#2D1E2F', secondary: '#E07A5F', accent: '#F4F1DE', pattern: 'horizon' },
-    hasAppleMusicBadge: true,
   },
 ];
 
@@ -1150,36 +1087,37 @@ export function hasActiveExploreFilters(filters: ExploreFilters): boolean {
   );
 }
 
-// Strict AND logic across all selected criteria within and across all 5 categories
+// OR within each category, AND across active (non-empty) categories:
+// (Artist A OR Artist B) AND (Genre X OR Genre Y) AND (City M OR City N) ...
 export function applyExploreFilters(songs: Song[], filters: ExploreFilters): Song[] {
   return songs.filter((song) => {
     if (filters.artists.length > 0) {
-      const matchesAllArtists = filters.artists.every((artist) =>
+      const matchesAnyArtist = filters.artists.some((artist) =>
         song.artists.includes(artist)
       );
-      if (!matchesAllArtists) return false;
+      if (!matchesAnyArtist) return false;
     }
     if (filters.genres.length > 0) {
-      const matchesAllGenres = filters.genres.every((genre) =>
+      const matchesAnyGenre = filters.genres.some((genre) =>
         song.genres.includes(genre)
       );
-      if (!matchesAllGenres) return false;
+      if (!matchesAnyGenre) return false;
     }
     if (filters.cities.length > 0) {
-      const matchesAllCities = filters.cities.every((city) => song.city === city);
-      if (!matchesAllCities) return false;
+      const matchesAnyCity = filters.cities.some((city) => song.city === city);
+      if (!matchesAnyCity) return false;
     }
     if (filters.moods.length > 0) {
-      const matchesAllMoods = filters.moods.every((mood) =>
+      const matchesAnyMood = filters.moods.some((mood) =>
         song.moods.includes(mood)
       );
-      if (!matchesAllMoods) return false;
+      if (!matchesAnyMood) return false;
     }
     if (filters.decades.length > 0) {
-      const matchesAllDecades = filters.decades.every(
+      const matchesAnyDecade = filters.decades.some(
         (decade) => song.decade === decade
       );
-      if (!matchesAllDecades) return false;
+      if (!matchesAnyDecade) return false;
     }
     return true;
   });

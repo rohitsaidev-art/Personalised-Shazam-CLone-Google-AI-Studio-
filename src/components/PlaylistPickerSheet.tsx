@@ -75,7 +75,7 @@ export const PlaylistPickerSheet: React.FC<PlaylistPickerSheetProps> = ({
                     : { type: 'spring', bounce: 0, duration: 0.32 }
                 }
                 {...sheetMotionDragProps}
-                className="absolute inset-x-0 bottom-0 z-[70] flex flex-col rounded-t-[32px] bg-[var(--surface-sheet)] border-t border-[var(--border-glass)] px-4 pt-2.5 pb-8 shadow-[0_-20px_54px_rgba(0,0,0,0.85)]"
+                className="absolute inset-x-0 bottom-0 z-[70] flex flex-col rounded-t-[32px] bg-[var(--surface-sheet)] border-t border-[var(--border-glass)] px-4 pt-2.5 pb-[calc(var(--safe-bottom)+24px)] md:pb-8 shadow-[0_-20px_54px_rgba(0,0,0,0.85)]"
               >
                 {/* Dedicated Drag Region: Sheet Grabber + Header */}
                 <div

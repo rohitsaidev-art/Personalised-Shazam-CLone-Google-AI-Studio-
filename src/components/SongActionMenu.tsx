@@ -1,10 +1,13 @@
 import React, { useMemo } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
+  Archive,
+  ArchiveRestore,
   CheckSquare,
   Flag,
   Layers,
   Share,
+  ThumbsDown,
   Trash2,
   UserCircle2,
   X,
@@ -21,14 +24,19 @@ import { CandidateCorrection, Song } from '../types/music';
 import { formatShortTimestamp, getCandidateCorrections } from '../data/songs';
 import { AlbumCover } from './ProceduralArtwork';
 import { UI_ICON_PROPS } from '../lib/iconConfig';
+import { useMenuKeyboardNav } from '../lib/useMenuKeyboardNav';
 import { useSheetDrag } from '../lib/useSheetDrag';
 import { cn } from '../lib/utils';
 
 interface SongActionMenuProps {
   song: Song | null;
   anchorRect: DOMRect | null;
+  isArchived?: boolean;
   onClose: () => void;
   onSelectMode: (songId: string) => void;
+  onArchiveSong: (songId: string) => void;
+  onUnarchiveSong?: (songId: string) => void;
+  onRecommendLess: (song: Song) => void;
   onRemoveSong: (songId: string) => void;
   onReportWrongSong: (song: Song) => void;
   onGoToArtist: (artist: string) => void;
@@ -38,16 +46,20 @@ interface SongActionMenuProps {
 }
 
 const PREVIEW_CARD_EST_H = 84;
-const MENU_EST_H = 296;
+const MENU_EST_H = 368;
 const STACK_GAP = 12;
-const SAFE_TOP = 64;
-const SAFE_BOTTOM = 28;
+const MARGIN_TOP = 16;
+const MARGIN_BOTTOM = 20;
 
 export const SongActionMenu: React.FC<SongActionMenuProps> = ({
   song,
   anchorRect,
+  isArchived = false,
   onClose,
   onSelectMode,
+  onArchiveSong,
+  onUnarchiveSong,
+  onRecommendLess,
   onRemoveSong,
   onReportWrongSong,
   onGoToArtist,
@@ -57,15 +69,28 @@ export const SongActionMenu: React.FC<SongActionMenuProps> = ({
 }) => {
   const open = song !== null;
   const prefersReducedMotion = useReducedMotion();
+  const { menuRef, handleMenuKeyDown } = useMenuKeyboardNav(open, onClose);
 
   // Spatially anchor preview + menu to the source card's Y offset inside MobileFrame (Board 05)
   const layoutPosition = useMemo(() => {
     const containerRect = portalContainer?.getBoundingClientRect();
     const frameHeight = containerRect?.height ?? 852;
+    const computed =
+      portalContainer && typeof window !== 'undefined'
+        ? window.getComputedStyle(portalContainer)
+        : null;
+    const dynamicSafeTop = computed
+      ? parseFloat(computed.getPropertyValue('--safe-top')) || 0
+      : 0;
+    const dynamicSafeBottom = computed
+      ? parseFloat(computed.getPropertyValue('--safe-bottom')) || 0
+      : 0;
+    const safeTop = Math.max(MARGIN_TOP, dynamicSafeTop + MARGIN_TOP);
+    const safeBottom = Math.max(MARGIN_BOTTOM, dynamicSafeBottom + MARGIN_BOTTOM);
 
     if (!anchorRect || !containerRect) {
       const centeredTop = Math.max(
-        SAFE_TOP,
+        safeTop,
         Math.round((frameHeight - (PREVIEW_CARD_EST_H + STACK_GAP + MENU_EST_H)) / 2)
       );
       return { topPx: centeredTop, menuAbove: false };
@@ -73,19 +98,19 @@ export const SongActionMenu: React.FC<SongActionMenuProps> = ({
 
     const relativeTop = anchorRect.top - containerRect.top;
     const totalHeight = PREVIEW_CARD_EST_H + STACK_GAP + MENU_EST_H;
-    const spaceBelow = frameHeight - relativeTop - PREVIEW_CARD_EST_H - SAFE_BOTTOM;
+    const spaceBelow = frameHeight - relativeTop - PREVIEW_CARD_EST_H - safeBottom;
 
     if (spaceBelow >= MENU_EST_H + STACK_GAP) {
-      const clampedTop = Math.max(SAFE_TOP, Math.round(relativeTop));
+      const clampedTop = Math.max(safeTop, Math.round(relativeTop));
       return { topPx: clampedTop, menuAbove: false };
     }
 
     // Near bottom of viewport: place menu cleanly above the anchored preview card
     const desiredBottom = Math.min(
-      frameHeight - SAFE_BOTTOM,
+      frameHeight - safeBottom,
       relativeTop + PREVIEW_CARD_EST_H
     );
-    const flippedTop = Math.max(SAFE_TOP, Math.round(desiredBottom - totalHeight));
+    const flippedTop = Math.max(safeTop, Math.round(desiredBottom - totalHeight));
     return { topPx: flippedTop, menuAbove: true };
   }, [anchorRect, portalContainer]);
 
@@ -94,7 +119,6 @@ export const SongActionMenu: React.FC<SongActionMenuProps> = ({
     const primaryArtist = song.artists[0] ?? song.artist;
     const primaryGenre = song.genres[0] ?? 'Alternative';
 
-    // Exact 6-item order mandated by Phase 1 brief & board 05
     return [
       {
         id: 'select',
@@ -104,6 +128,30 @@ export const SongActionMenu: React.FC<SongActionMenuProps> = ({
         onRun: () => {
           onClose();
           onSelectMode(song.id);
+        },
+      },
+      {
+        id: isArchived ? 'unarchive' : 'archive',
+        label: isArchived ? 'Unarchive' : 'Archive',
+        icon: isArchived ? ArchiveRestore : Archive,
+        destructive: false,
+        onRun: () => {
+          onClose();
+          if (isArchived && onUnarchiveSong) {
+            onUnarchiveSong(song.id);
+          } else {
+            onArchiveSong(song.id);
+          }
+        },
+      },
+      {
+        id: 'recommend-less',
+        label: 'Recommend Less',
+        icon: ThumbsDown,
+        destructive: false,
+        onRun: () => {
+          onClose();
+          onRecommendLess(song);
         },
       },
       {
@@ -159,8 +207,12 @@ export const SongActionMenu: React.FC<SongActionMenuProps> = ({
     ];
   }, [
     song,
+    isArchived,
     onClose,
     onSelectMode,
+    onArchiveSong,
+    onUnarchiveSong,
+    onRecommendLess,
     onRemoveSong,
     onReportWrongSong,
     onGoToArtist,
@@ -203,6 +255,8 @@ export const SongActionMenu: React.FC<SongActionMenuProps> = ({
 
   const menuNode = (
     <motion.div
+      ref={menuRef}
+      onKeyDown={handleMenuKeyDown}
       role="menu"
       aria-label={song ? `Actions for ${song.title}` : 'Song actions'}
       initial={
@@ -230,7 +284,7 @@ export const SongActionMenu: React.FC<SongActionMenuProps> = ({
           : { type: 'spring', bounce: 0, duration: 0.26 }
       }
       className={cn(
-        'glass-popover w-[248px] overflow-hidden rounded-[18px] py-1',
+        'glass-popover w-[248px] max-h-[calc(100dvh-168px)] overflow-y-auto no-scrollbar rounded-[18px] py-1',
         layoutPosition.menuAbove ? 'origin-bottom-left' : 'origin-top-left'
       )}
     >
@@ -243,7 +297,7 @@ export const SongActionMenu: React.FC<SongActionMenuProps> = ({
               role="menuitem"
               onClick={item.onRun}
               className={cn(
-                'pressable flex min-h-[46px] w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] leading-snug hover:bg-white/[0.08] cursor-pointer focus-visible:outline-none focus-visible:bg-white/[0.1]',
+                'pressable flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-[15px] leading-snug hover:bg-white/[0.08] cursor-pointer focus-visible:outline-none focus-visible:bg-white/[0.1]',
                 item.destructive ? 'text-[var(--accent-red)]' : 'text-white'
               )}
             >
@@ -372,7 +426,7 @@ export const WrongSongDialog: React.FC<WrongSongDialogProps> = ({
                     : { type: 'spring', bounce: 0, duration: 0.32 }
                 }
                 {...sheetMotionDragProps}
-                className="absolute inset-x-0 bottom-0 z-50 rounded-t-[32px] bg-[var(--surface-sheet)] border-t border-[var(--border-glass)] px-4 pt-2.5 pb-8 shadow-[0_-18px_48px_rgba(0,0,0,0.8)]"
+                className="absolute inset-x-0 bottom-0 z-50 rounded-t-[32px] bg-[var(--surface-sheet)] border-t border-[var(--border-glass)] px-4 pt-2.5 pb-[calc(var(--safe-bottom)+24px)] md:pb-8 shadow-[0_-18px_48px_rgba(0,0,0,0.8)]"
               >
                 {/* Grabber + Header Drag Region */}
                 <div

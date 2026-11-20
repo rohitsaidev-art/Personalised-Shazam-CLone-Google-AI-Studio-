@@ -9,6 +9,7 @@ import {
 } from './ui/popover';
 import { SortConfig, SortField, SortOrder } from '../types/music';
 import { CHECK_ICON_PROPS, UI_ICON_PROPS } from '../lib/iconConfig';
+import { useMenuKeyboardNav } from '../lib/useMenuKeyboardNav';
 import { cn } from '../lib/utils';
 
 interface SortPopoverProps {
@@ -37,6 +38,9 @@ export const SortPopover: React.FC<SortPopoverProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const { menuRef, handleMenuKeyDown } = useMenuKeyboardNav(open, () =>
+    setOpen(false)
+  );
 
   const handleField = (field: SortField) => {
     onTriggerHaptic?.();
@@ -79,6 +83,8 @@ export const SortPopover: React.FC<SortPopoverProps> = ({
               className="w-[228px] origin-top-right"
             >
               <motion.div
+                ref={menuRef}
+                onKeyDown={handleMenuKeyDown}
                 role="menu"
                 aria-label="Sort library"
                 initial={
